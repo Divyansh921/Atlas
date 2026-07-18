@@ -38,11 +38,18 @@
         <!-- Scan Button -->
         <form action="/scan" method="get">
 
-            <button type="submit">
-                Scan Folder
-            </button>
+    <input
+        type="text"
+        name="folder"
+        placeholder="Enter folder path (e.g. D:\Downloads)"
+        required
+    >
 
-        </form>
+    <button type="submit">
+        Scan Folder
+    </button>
+
+</form>
 
         <hr>
 

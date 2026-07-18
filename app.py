@@ -34,10 +34,10 @@ def search():
 
 @app.route("/scan")
 def scan():
-
-    folder = r"D:\Atlas"
-
+    folder = request.args.get("folder")
     files = scan_folder(folder)
+    if not folder:
+        return "No folder selected."
 
     save_files(files)
 
