@@ -7,10 +7,10 @@ def create_database ():
     CREATE TABLE IF NOT EXISTS files (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_name TEXT NOT NULL,
-        file_path TEXT NOT NULL,
+        file_path TEXT NOT NULL UNIQUE,
         extension TEXT,
         size INTEGER,
-        last_modified TEXT
+        last_modified REAL
     )
     """)
 
@@ -33,7 +33,14 @@ def save_files(files):
             INSERT INTO files
             (file_name, file_path, extension, size, last_modified)
             VALUES (?, ?, ?, ?, ?)
-        """, (file_name, file_path, extension, size, last_modified))
+
+            ON CONFLICT(file_path)
+            DO UPDATE SET
+                file_name = excluded.file_name,
+                extension = excluded.extension,
+                size = excluded.size,
+                last_modified = excluded.last_modified;
+                    """, (file_name, file_path, extension, size, last_modified))
 
     connection.commit()
     connection.close()
