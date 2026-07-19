@@ -14,8 +14,16 @@
 
     <div class="container">
 
-        <h1>Atlas</h1>
-        <p>Your Personal File Search Engine</p>
+    <h1>Atlas</h1>
+    <p>Your Personal File Search Engine</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <!-- Search Form -->
         <form action="/search" method="get">
