@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, flash 
 
 from database.db import create_database, save_files, search_files
 from scanner.scan import scan_folder
 
 app = Flask(__name__)
-
+app.secret_key = "secret_key"
 # Create the database 
 create_database()
 
@@ -14,8 +14,10 @@ def home():
     return render_template(
         "index.html",
         results=None,
-        query=""
+        query="",
+        message=""
     )
+    
 
 
 @app.route("/search")
@@ -35,13 +37,15 @@ def search():
 @app.route("/scan")
 def scan():
     folder = request.args.get("folder")
-    files = scan_folder(folder)
+  
     if not folder:
         return "No folder selected."
-
+    files = scan_folder(folder)   
     save_files(files)
 
-    return f"Saved {len(files)} files to Atlas database."
+    flash(f"Successfully indexed {len(files)} files.")
+
+    return redirect(url_for("home"))
 
 
 if __name__ == "__main__":
