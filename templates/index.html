@@ -6,16 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atlas</title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
 
     <div class="container">
 
-    <h1>Atlas</h1>
-    <p>Your Personal File Search Engine</p>
+        <h1>Atlas</h1>
+        <p>Your Personal File Search Engine</p>
 
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -43,21 +42,21 @@
 
         <br>
 
-        <!-- Scan Button -->
+        <!-- Scan Folder -->
         <form action="/scan" method="get">
 
-    <input
-        type="text"
-        name="folder"
-        placeholder="Enter folder path (e.g. D:\Downloads)"
-        required
-    >
+            <input
+                type="text"
+                name="folder"
+                placeholder="Enter folder path (e.g. D:\Downloads)"
+                required
+            >
 
-    <button type="submit">
-        Scan Folder
-    </button>
+            <button type="submit">
+                Scan Folder
+            </button>
 
-</form>
+        </form>
 
         <hr>
 
@@ -67,23 +66,48 @@
 
             <ul>
 
-            {% for file in results %}
+                {% for file in results %}
 
-                <li>
-                    <strong>{{ file[0] }}</strong><br>
-                    {{ file[1] }}<br>
-                    Last Modified: {{ file[2] }}
-                </li>
+                    <li>
 
-                <br>
+                        <strong>{{ file[0] }}</strong><br>
 
-            {% endfor %}
+                        {{ file[1] }}<br>
+
+                        <strong>Size:</strong> {{ file[2] }}<br>
+
+                        <strong>Last Modified:</strong> {{ file[3] }}<br><br>
+
+                        <!-- Open File -->
+                        <form action="/open" method="get">
+
+                            <input
+                                type="hidden"
+                                name="path"
+                                value="{{ file[1] }}"
+                            >
+
+                            <button type="submit">
+                                Open File
+                            </button>
+
+                        </form>
+
+                    </li>
+
+                    <br>
+
+                {% endfor %}
 
             </ul>
 
         {% elif query %}
 
             <p>No files found.</p>
+
+        {% else %}
+
+            <p>Search for a file to see results.</p>
 
         {% endif %}
 

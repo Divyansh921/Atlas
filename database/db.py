@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 import os
 def create_database ():
     connection = sqlite3.connect("atlas.db")    #open database
@@ -45,13 +46,45 @@ def save_files(files):
     connection.commit()
     connection.close()
 
-
 def search_files(query):
-    connection = sqlite3.connect("atlas.db")    #open database
-    cursor=connection.cursor()
+    connection = sqlite3.connect("atlas.db")
+    cursor = connection.cursor()
+
     cursor.execute("""
-        SELECT file_name, file_path, last_modified FROM files WHERE file_name LIKE ?
+        SELECT file_name, file_path, size, last_modified
+        FROM files
+        WHERE file_name LIKE ?
     """, (f"%{query}%",))
+
     results = cursor.fetchall()
     connection.close()
-    return results
+
+    formatted_results = []
+
+    def format_file_size(size):
+
+        if size < 1024:
+            return f"{size} B"
+
+        elif size < 1024 ** 2:
+            return f"{size / 1024:.2f} KB"
+
+        elif size < 1024 ** 3:
+            return f"{size / (1024 ** 2):.2f} MB"
+
+        else:
+            return f"{size / (1024 ** 3):.2f} GB"
+    for file_name, file_path, size, last_modified in results:
+
+        formatted_date = datetime.fromtimestamp(last_modified).strftime("%d %b %Y, %I:%M %p")
+        formatted_size = format_file_size(size)
+        formatted_results.append(
+            (
+                file_name,
+                file_path,
+                formatted_date,
+                formatted_size
+            )
+        )
+
+    return formatted_results

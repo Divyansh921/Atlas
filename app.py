@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, render_template, request, redirect, url_for, flash 
 
 from database.db import create_database, save_files, search_files
@@ -47,6 +49,13 @@ def scan():
 
     return redirect(url_for("home"))
 
-
+@app.route("/open")
+def openfile():
+    path = request.args.get("path")
+    if not path:
+        flash("no file selected")
+        return redirect(url_for("home"))
+    os.startfile(path)
+    return redirect(url_for("home"))
 if __name__ == "__main__":
     app.run(debug=False)
