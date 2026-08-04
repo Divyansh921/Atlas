@@ -1,48 +1,332 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-    font-family:Arial, Helvetica, sans-serif;
-    background:#121212;
-    color:white;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #121212;
+    color: #ffffff;
+    min-height: 100vh;
+    padding: 40px 20px;
 }
 
-.container{
-    text-align:center;
-    width:700px;
+/* =========================
+   MAIN CONTAINER
+========================= */
+
+.container {
+    width: min(900px, 100%);
+    margin: 0 auto;
 }
 
-h1{
-    font-size:60px;
-    margin-bottom:10px;
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    text-align: center;
+    margin-bottom: 35px;
 }
 
-p{
-    color:#bdbdbd;
-    margin-bottom:35px;
+h1 {
+    font-size: 58px;
+    margin-bottom: 8px;
+    letter-spacing: -2px;
 }
 
-.search-box input{
-    width:100%;
-    padding:18px;
-    font-size:18px;
-    border:none;
-    border-radius:12px;
-    outline:none;
-    margin-bottom:20px;
+.subtitle {
+    color: #9e9e9e;
+    font-size: 16px;
 }
 
-button{
-    padding:14px 28px;
-    font-size:18px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
+/* =========================
+   SEARCH / SCAN SECTION
+========================= */
+
+.controls {
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.search-form,
+.scan-form {
+    display: flex;
+    gap: 10px;
+}
+
+.search-form {
+    margin-bottom: 12px;
+}
+
+input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 15px 16px;
+    background: #252525;
+    color: #ffffff;
+    border: 1px solid #333333;
+    border-radius: 10px;
+    outline: none;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+}
+
+input[type="text"]::placeholder {
+    color: #777777;
+}
+
+input[type="text"]:focus {
+    border-color: #666666;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+button {
+    padding: 14px 22px;
+    background: #ffffff;
+    color: #121212;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+button:hover {
+    background: #dddddd;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* =========================
+   FLASH MESSAGES
+========================= */
+
+.flash-message {
+    background: #2a2110;
+    border: 1px solid #55451f;
+    color: #e5c76b;
+    padding: 12px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+/* =========================
+   RESULTS HEADER
+========================= */
+
+.results-section {
+    margin-top: 10px;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.results-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.results-count {
+    color: #777777;
+    font-size: 14px;
+}
+
+/* =========================
+   RESULTS CONTAINER
+========================= */
+
+.results-container {
+    max-height: 55vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+}
+
+/* Scrollbar */
+
+.results-container::-webkit-scrollbar {
+    width: 7px;
+}
+
+.results-container::-webkit-scrollbar-track {
+    background: #181818;
+    border-radius: 10px;
+}
+
+.results-container::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 10px;
+}
+
+.results-container::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}
+
+/* Firefox */
+
+.results-container {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3a #181818;
+}
+
+/* =========================
+   RESULT CARD
+========================= */
+
+.result-card {
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+.result-card:hover {
+    background: #202020;
+    border-color: #3a3a3a;
+}
+
+/* =========================
+   FILE NAME
+========================= */
+
+.file-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 8px;
+
+    /* Prevent extremely long filenames */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================
+   PATH
+========================= */
+
+.file-path {
+    color: #858585;
+    font-size: 13px;
+    margin-bottom: 15px;
+
+    /* Long paths no longer destroy layout */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================
+   METADATA
+========================= */
+
+.file-meta {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meta-label {
+    color: #666666;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.meta-value {
+    color: #c7c7c7;
+    font-size: 13px;
+}
+
+/* =========================
+   RESULT ACTIONS
+========================= */
+
+.result-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.open-button {
+    padding: 9px 16px;
+    font-size: 13px;
+}
+
+/* =========================
+   EMPTY STATES
+========================= */
+
+.empty-state {
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    padding: 35px 20px;
+    text-align: center;
+}
+
+.empty-state p {
+    color: #777777;
+    margin: 0;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 650px) {
+
+    body {
+        padding: 25px 15px;
+    }
+
+    h1 {
+        font-size: 46px;
+    }
+
+    .search-form,
+    .scan-form {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+    }
+
+    .results-container {
+        max-height: 60vh;
+    }
+
+    .file-meta {
+        gap: 15px;
+    }
 }

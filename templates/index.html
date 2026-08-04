@@ -4,117 +4,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Atlas</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
 
 <body>
 
     <div class="container">
 
-        <h1>Atlas</h1>
-        <p>Your Personal File Search Engine</p>
+        <!-- 
+             HEADER
+         -->
+
+        <header class="header">
+
+            <h1>Atlas</h1>
+
+            <p class="subtitle">
+                Your Personal File Search Engine
+            </p>
+
+        </header>
+
+
+        <!-- 
+             FLASH MESSAGES
+         -->
 
         {% with messages = get_flashed_messages() %}
+
             {% if messages %}
+
                 {% for message in messages %}
-                    <p>{{ message }}</p>
+
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+
                 {% endfor %}
+
             {% endif %}
+
         {% endwith %}
 
-        <!-- Search Form -->
-        <form action="/search" method="get">
 
-            <input
-                type="text"
-                name="query"
-                placeholder="Search for a file..."
-                value="{{ query }}"
+        <!-- 
+             CONTROLS
+         -->
+
+        <section class="controls">
+
+            <!-- Search -->
+
+            <form
+                class="search-form"
+                action="/search"
+                method="get"
             >
 
-            <button type="submit">
-                Search
-            </button>
+                <input
+                    type="text"
+                    name="query"
+                    placeholder="Search for a file..."
+                    value="{{ query }}"
+                >
 
-        </form>
+                <button type="submit">
+                    Search
+                </button>
 
-        <br>
+            </form>
 
-        <!-- Scan Folder -->
-        <form action="/scan" method="get">
 
-            <input
-                type="text"
-                name="folder"
-                placeholder="Enter folder path (e.g. D:\Downloads)"
-                required
+            <!-- Scan Folder -->
+
+            <form
+                class="scan-form"
+                action="/scan"
+                method="get"
             >
 
-            <button type="submit">
-                Scan Folder
-            </button>
+                <input
+                    type="text"
+                    name="folder"
+                    placeholder="Enter folder path (e.g. D:\Downloads)"
+                    required
+                >
 
-        </form>
+                <button type="submit">
+                    Scan Folder
+                </button>
 
-        <hr>
+            </form>
 
-        <h2>Search Results</h2>
+        </section>
 
-        {% if results %}
 
-            <ul>
+        <!-- 
+             RESULTS
+         -->
 
-                {% for file in results %}
+        <section class="results-section">
 
-                    <li>
+            <div class="results-header">
 
-                        <strong>{{ file[0] }}</strong><br>
+                <h2>Search Results</h2>
 
-                        {{ file[1] }}<br>
+                {% if results %}
+                    <span class="results-count">
+                        {{ results|length }} result{% if results|length != 1 %}s{% endif %}
+                    </span>
+                {% endif %}
 
-                        <strong>Size:</strong> {{ file[2] }}<br>
+            </div>
 
-                        <strong>Last Modified:</strong> {{ file[3] }}<br><br>
 
-                        <!-- Open File -->
-                        <form action="/open" method="get">
+            {% if results %}
 
-                            <input
-                                type="hidden"
-                                name="path"
-                                value="{{ file[1] }}"
+                <!-- Scrollable result area -->
+
+                <div class="results-container">
+
+                    {% for file in results %}
+
+                        <article class="result-card">
+
+                            <!-- File name -->
+
+                            <div
+                                class="file-name"
+                                title="{{ file[0] }}"
                             >
+                                {{ file[0] }}
+                            </div>
 
-                            <button type="submit">
-                                Open File
-                            </button>
 
-                        </form>
+                            <!-- File path -->
 
-                    </li>
+                            <div
+                                class="file-path"
+                                title="{{ file[1] }}"
+                            >
+                                {{ file[1] }}
+                            </div>
 
-                    <br>
 
-                {% endfor %}
+                            <!-- File metadata -->
 
-            </ul>
+                            <div class="file-meta">
 
-        {% elif query %}
+                                <div class="meta-item">
 
-            <p>No files found.</p>
+                                    <span class="meta-label">
+                                        Size
+                                    </span>
 
-        {% else %}
+                                    <span class="meta-value">
+                                        {{ file[3] }}
+                                    </span>
 
-            <p>Search for a file to see results.</p>
+                                </div>
 
-        {% endif %}
+
+                                <div class="meta-item">
+
+                                    <span class="meta-label">
+                                        Last Modified
+                                    </span>
+
+                                    <span class="meta-value">
+                                        {{ file[2] }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Actions -->
+
+                            <div class="result-actions">
+
+                                <form
+                                    action="/open"
+                                    method="get"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="path"
+                                        value="{{ file[1] }}"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="query"
+                                        value="{{ query }}"
+                                    >
+                                    <button
+                                        type="submit"
+                                        class="open-button"
+                                    >
+                                        Open File
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </article>
+
+                    {% endfor %}
+
+                </div>
+
+
+            {% elif query %}
+
+                <div class="empty-state">
+
+                    <p>
+                        No files found for "{{ query }}".
+                    </p>
+
+                </div>
+
+
+            {% else %}
+
+                <div class="empty-state">
+
+                    <p>
+                        Search for a file to see results.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </section>
 
     </div>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script
+        src="{{ url_for('static', filename='js/script.js') }}"
+    ></script>
 
 </body>
 
 </html>
+

@@ -52,10 +52,11 @@ def scan():
 @app.route("/open")
 def openfile():
     path = request.args.get("path")
+    query = request.args.get("query")
     if not path:
         flash("no file selected")
         return redirect(url_for("home"))
     os.startfile(path)
-    return redirect(url_for("home"))
+    return redirect(url_for("search",query=query))
 if __name__ == "__main__":
     app.run(debug=False)
