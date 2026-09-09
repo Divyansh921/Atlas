@@ -52,57 +52,187 @@
 
         {% endwith %}
 
+<!--
+     CONTROLS
+-->
 
-        <!-- 
-             CONTROLS
-         -->
+<section class="controls">
 
-        <section class="controls">
+    <!-- Search -->
 
-            <!-- Search -->
+    <form
+        class="search-form"
+        action="/search"
+        method="get"
+    >
 
-            <form
-                class="search-form"
-                action="/search"
-                method="get"
+        <input
+            type="text"
+            name="query"
+            placeholder="Search for a file..."
+            value="{{ query }}"
+        >
+
+        <button type="submit">
+            Search
+        </button>
+
+    </form>
+
+
+    <!-- Filters -->
+
+    <form
+        class="filter-form"
+        action="/search"
+        method="get"
+    >
+
+        <!-- Keep the current search query -->
+
+        <input
+            type="hidden"
+            name="query"
+            value="{{ query }}"
+        >
+
+
+        <!-- Drive -->
+
+        <div class="filter-group">
+
+            <label for="drive">
+                Drive
+            </label>
+
+            <select
+                id="drive"
+                name="drive"
+                onchange="this.form.submit()"
             >
 
-                <input
-                    type="text"
-                    name="query"
-                    placeholder="Search for a file..."
-                    value="{{ query }}"
+                <option
+                    value="all"
+                    {% if drive == "all" %}selected{% endif %}
                 >
+                    All Drives
+                </option>
 
-                <button type="submit">
-                    Search
-                </button>
+                {% for available_drive in drives %}
 
-            </form>
+                    <option
+                        value="{{ available_drive }}"
+                        {% if drive == available_drive %}selected{% endif %}
+                    >
+                        {{ available_drive }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
 
 
-            <!-- Scan Folder -->
+        <!-- Sort -->
 
-            <form
-                class="scan-form"
-                action="/scan"
-                method="get"
+        <div class="filter-group">
+
+            <label for="sort">
+                Sort by
+            </label>
+
+            <select
+                id="sort"
+                name="sort"
+                onchange="this.form.submit()"
             >
 
-                <input
-                    type="text"
-                    name="folder"
-                    placeholder="Enter folder path (e.g. D:\Downloads)"
-                    required
+                <option
+                    value="relevance"
+                    {% if sort_by == "relevance" %}selected{% endif %}
                 >
+                    Relevance
+                </option>
 
-                <button type="submit">
-                    Scan Folder
-                </button>
+                <option
+                    value="name_asc"
+                    {% if sort_by == "name_asc" %}selected{% endif %}
+                >
+                    Name (A → Z)
+                </option>
 
-            </form>
+                <option
+                    value="name_desc"
+                    {% if sort_by == "name_desc" %}selected{% endif %}
+                >
+                    Name (Z → A)
+                </option>
 
-        </section>
+                <option
+                    value="size_asc"
+                    {% if sort_by == "size_asc" %}selected{% endif %}
+                >
+                    Size (Small → Large)
+                </option>
+
+                <option
+                    value="size_desc"
+                    {% if sort_by == "size_desc" %}selected{% endif %}
+                >
+                    Size (Large → Small)
+                </option>
+
+                <option
+                    value="modified_newest"
+                    {% if sort_by == "modified_newest" %}selected{% endif %}
+                >
+                    Last Modified (Newest)
+                </option>
+
+                <option
+                    value="modified_oldest"
+                    {% if sort_by == "modified_oldest" %}selected{% endif %}
+                >
+                    Last Modified (Oldest)
+                </option>
+
+                <option
+                    value="type"
+                    {% if sort_by == "type" %}selected{% endif %}
+                >
+                    File Type
+                </option>
+
+            </select>
+
+        </div>
+
+    </form>
+
+
+    <!-- Scan Folder -->
+
+    <form
+        class="scan-form"
+        action="/scan"
+        method="get"
+    >
+
+        <input
+            type="text"
+            name="folder"
+            placeholder="Enter folder path (e.g. D:\Downloads)"
+            required
+        >
+
+        <button type="submit">
+            Scan Folder
+        </button>
+
+    </form>
+
+</section>
 
 
         <!-- 
@@ -112,7 +242,11 @@
         <section class="results-section">
 
             <div class="results-header">
+                    {% if results %}
 
+        </div>
+    {% endif %}
+            <div>
                 <h2>Search Results</h2>
 
                 {% if results %}
@@ -120,8 +254,9 @@
                         {{ results|length }} result{% if results|length != 1 %}s{% endif %}
                     </span>
                 {% endif %}
-
             </div>
+
+        </div>
 
 
             {% if results %}

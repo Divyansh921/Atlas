@@ -48,17 +48,76 @@ def save_files(files):
     connection.commit()
     connection.close()
 
-def search_files(query):
+def get_available_drives():
+    drives=[]
+    for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        drive = f"{letter}:\\"
+        if os.path.exists(drive):
+            drives.append(f"{letter}:")
+
+    return drives
+
+def search_files(query, drive=None, sort_by="relevance"):
+
     connection = sqlite3.connect("atlas.db")
     cursor = connection.cursor()
 
-    cursor.execute("""
+    query = query or ""
+
+    sql = """
         SELECT file_name, file_path, size, last_modified
         FROM files
         WHERE file_name LIKE ?
-    """, (f"%{query}%",))
+    """
+
+    parameters = [f"%{query}%"]
+
+    # Drive filter
+    if drive and drive != "all":
+
+        sql += """
+            AND UPPER(file_path) LIKE ?
+        """
+
+        parameters.append(f"{drive.upper()}%")
+
+    # Sorting
+    if sort_by == "name_asc":
+
+        sql += " ORDER BY file_name COLLATE NOCASE ASC"
+
+    elif sort_by == "name_desc":
+
+        sql += " ORDER BY file_name COLLATE NOCASE DESC"
+
+    elif sort_by == "size_asc":
+
+        sql += " ORDER BY size ASC"
+
+    elif sort_by == "size_desc":
+
+        sql += " ORDER BY size DESC"
+
+    elif sort_by == "modified_newest":
+
+        sql += " ORDER BY last_modified DESC"
+
+    elif sort_by == "modified_oldest":
+
+        sql += " ORDER BY last_modified ASC"
+
+    elif sort_by == "type":
+
+        sql += " ORDER BY extension COLLATE NOCASE ASC"
+
+    else:
+        # Default / relevance
+        sql += " ORDER BY file_name COLLATE NOCASE ASC"
+
+    cursor.execute(sql, parameters)
 
     results = cursor.fetchall()
+
     connection.close()
 
     formatted_results = []
@@ -76,10 +135,15 @@ def search_files(query):
 
         else:
             return f"{size / (1024 ** 3):.2f} GB"
+
     for file_name, file_path, size, last_modified in results:
 
-        formatted_date = datetime.fromtimestamp(last_modified).strftime("%d %b %Y, %I:%M %p")
+        formatted_date = datetime.fromtimestamp(
+            last_modified
+        ).strftime("%d %b %Y, %I:%M %p")
+
         formatted_size = format_file_size(size)
+
         formatted_results.append(
             (
                 file_name,
