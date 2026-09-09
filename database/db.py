@@ -25,23 +25,25 @@ def save_files(files):
     cursor = connection.cursor()
 
     for file_path in files:
+        try:
+            file_name = os.path.basename(file_path)
+            extension = os.path.splitext(file_path)[1]
+            size = os.path.getsize(file_path)
+            last_modified = os.path.getmtime(file_path)
+            cursor.execute("""
+                INSERT INTO files
+                (file_name, file_path, extension, size, last_modified)
+                VALUES (?, ?, ?, ?, ?)
 
-        file_name = os.path.basename(file_path)
-        extension = os.path.splitext(file_path)[1]
-        size = os.path.getsize(file_path)
-        last_modified = os.path.getmtime(file_path)
-        cursor.execute("""
-            INSERT INTO files
-            (file_name, file_path, extension, size, last_modified)
-            VALUES (?, ?, ?, ?, ?)
-
-            ON CONFLICT(file_path)
-            DO UPDATE SET
-                file_name = excluded.file_name,
-                extension = excluded.extension,
-                size = excluded.size,
-                last_modified = excluded.last_modified;
-                    """, (file_name, file_path, extension, size, last_modified))
+                ON CONFLICT(file_path)
+                DO UPDATE SET
+                    file_name = excluded.file_name,
+                    extension = excluded.extension,
+                    size = excluded.size,
+                    last_modified = excluded.last_modified;
+                        """, (file_name, file_path, extension, size, last_modified))
+        except(FileNotFoundError, PermissionError):
+            continue
 
     connection.commit()
     connection.close()
