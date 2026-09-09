@@ -1,7 +1,7 @@
 # ATLAS
 
 ## Problem Statement
-modern computers store thousands of files, and it's hard for users to find exactly what they need. People remember context like 'the PDF I downloaded last week,' but traditional search relies on exact file names. So, Atlas aims to fix that by offering a fast, intelligent, and user-friendly file search system, locally.
+modern computers store thousands of files, and it's hard for users to find exactly what they need. People remember context like 'the PDF I downloaded last week,' but traditional search relies on exact file names. So, Atlas aims to fix that by offering a fast, intelligent, and user friendly file search system, locally.
 
 ## Goal 
 build a local file search app that lets users find files using natural language queries.
