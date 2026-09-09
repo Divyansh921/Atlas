@@ -64,22 +64,44 @@ def search_files(query, drive=None, sort_by="relevance"):
 
     query = query or ""
 
+    # Split the search into individual words
+    search_terms = query.split()
+
     sql = """
         SELECT file_name, file_path, size, last_modified
         FROM files
-        WHERE file_name LIKE ?
     """
 
-    parameters = [f"%{query}%"]
+    parameters = []
+
+    # Search using AND between every word
+    if search_terms:
+
+        conditions = []
+
+        for term in search_terms:
+
+            conditions.append(
+                "file_name LIKE ?"
+            )
+
+            parameters.append(
+                f"%{term}%"
+            )
+
+        sql += " WHERE " + " AND ".join(conditions)
 
     # Drive filter
     if drive and drive != "all":
 
-        sql += """
-            AND UPPER(file_path) LIKE ?
-        """
+        if search_terms:
+            sql += " AND UPPER(file_path) LIKE ?"
+        else:
+            sql += " WHERE UPPER(file_path) LIKE ?"
 
-        parameters.append(f"{drive.upper()}%")
+        parameters.append(
+            f"{drive.upper()}%"
+        )
 
     # Sorting
     if sort_by == "name_asc":
