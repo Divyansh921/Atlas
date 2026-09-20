@@ -360,3 +360,20 @@ button:active {
         gap: 15px;
     }
 }
+
+/* Scan actions */
+
+.scan-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.quick-scan-form {
+    margin: 0;
+}
+
+.quick-scan-button {
+    white-space: nowrap;
+}
