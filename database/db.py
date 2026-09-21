@@ -500,7 +500,8 @@ def quick_scan_location(location_id):
 def search_files(
     query,
     drive=None,
-    sort_by="relevance"
+    sort_by="relevance",
+    file_type="all"
 ):
 
     connection = sqlite3.connect("atlas.db")
@@ -563,17 +564,6 @@ def search_files(
 
     # ========================================================
     # SEARCH CANDIDATES
-    #
-    # SQLite performs a broad search first.
-    #
-    # This allows filenames such as:
-    #
-    # ExamForge
-    # Exam Forge
-    # Exam_Forge
-    # Exam-Forge
-    #
-    # to reach the Python relevance system.
     # ========================================================
 
     if search_terms:
@@ -595,7 +585,7 @@ def search_files(
             )
 
         # ----------------------------------------------------
-        # Search filename with separators removed.
+        # Search filename with separators removed
         # ----------------------------------------------------
 
         normalized_sql_name = """
@@ -678,6 +668,41 @@ def search_files(
 
         parameters.append(
             f"{drive.upper()}%"
+        )
+
+    # ========================================================
+    # FILE TYPE FILTER
+    # ========================================================
+
+    if file_type and file_type != "all":
+
+        if search_terms or (
+            drive and drive != "all"
+        ):
+
+            sql += """
+                AND LOWER(extension) = ?
+            """
+
+        else:
+
+            sql += """
+                WHERE LOWER(extension) = ?
+            """
+
+        # Make sure the extension always has a dot.
+        #
+        # pdf  -> .pdf
+        # .pdf -> .pdf
+
+        selected_extension = file_type.lower()
+
+        if not selected_extension.startswith("."):
+
+            selected_extension = "." + selected_extension
+
+        parameters.append(
+            selected_extension
         )
 
     # ========================================================
@@ -832,9 +857,6 @@ def search_files(
 
         # ----------------------------------------------------
         # Internal / technical file types.
-        #
-        # These are NOT hidden.
-        # They simply rank lower for broad searches.
         # ----------------------------------------------------
 
         internal_file_extensions = {
@@ -904,17 +926,6 @@ def search_files(
 
         # ----------------------------------------------------
         # Split filename into meaningful tokens.
-        #
-        # Examples:
-        #
-        # CorelProperties
-        # -> Corel + Properties
-        #
-        # System.Private.CoreLib
-        # -> System + Private + Core + Lib
-        #
-        # Exam_Forge
-        # -> Exam + Forge
         # ----------------------------------------------------
 
         def filename_tokens(text):
@@ -1005,13 +1016,6 @@ def search_files(
 
             # =================================================
             # 3. EXACT NORMALIZED FILENAME
-            #
-            # Exam Forge
-            # Exam_Forge
-            # Exam-Forge
-            # ExamForge
-            #
-            # can all match.
             # =================================================
 
             if normalized_name == normalized_query:
@@ -1059,10 +1063,6 @@ def search_files(
 
             # =================================================
             # 6. QUERY STARTS A FILENAME TOKEN
-            #
-            # Corel -> CorelProperties
-            #
-            # This is useful and gets a moderate boost.
             # =================================================
 
             for token in tokens:
@@ -1077,11 +1077,6 @@ def search_files(
 
             # =================================================
             # 7. SUBSTRING MATCH
-            #
-            # Corel -> CoreLib
-            #
-            # This remains searchable, but receives only
-            # a small score because it isn't a proper token.
             # =================================================
 
             for token in tokens:
@@ -1136,14 +1131,6 @@ def search_files(
 
             # =================================================
             # 11. EXECUTABLE BOOST
-            #
-            # Searches such as:
-            #
-            # Chrome
-            # Adobe
-            # Corel
-            #
-            # should favor actual applications.
             # =================================================
 
             if extension in {
@@ -1155,8 +1142,6 @@ def search_files(
 
             # =================================================
             # 12. PROGRAM FILES BOOST
-            #
-            # Installed applications commonly live here.
             # =================================================
 
             lower_path = file_path.lower()
@@ -1172,8 +1157,6 @@ def search_files(
 
             # =================================================
             # 13. EXACT FILE OVERRIDE
-            #
-            # Explicit searches should always remain strong.
             # =================================================
 
             if full_name_lower == query_lower:
@@ -1182,13 +1165,6 @@ def search_files(
 
             # =================================================
             # 14. EXACT INTERNAL FILE SEARCH
-            #
-            # Example:
-            #
-            # chrome.dll
-            # CorelProperties.propdesc
-            #
-            # These must remain searchable.
             # =================================================
 
             if (
@@ -1200,9 +1176,6 @@ def search_files(
 
             # =================================================
             # 15. LONG TECHNICAL NAMES
-            #
-            # Slight penalty for very long generated/internal
-            # files.
             # =================================================
 
             if (

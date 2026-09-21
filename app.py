@@ -48,6 +48,7 @@ def home():
         results=None,
         query="",
         drive="all",
+        file_type="all",
         sort_by="relevance",
         drives=drives,
         message=""
@@ -71,6 +72,11 @@ def search():
         "all"
     )
 
+    file_type = request.args.get(
+        "file_type",
+        "all"
+    )
+
     sort_by = request.args.get(
         "sort",
         "relevance"
@@ -79,7 +85,8 @@ def search():
     results = search_files(
         query,
         drive,
-        sort_by
+        sort_by,
+        file_type
     )
 
     drives = get_available_drives()
@@ -89,6 +96,7 @@ def search():
         results=results,
         query=query,
         drive=drive,
+        file_type=file_type,
         sort_by=sort_by,
         drives=drives
     )
@@ -217,110 +225,8 @@ def openfile():
         "all"
     )
 
-    sort_by = request.args.get(
-        "sort",
-        "relevance"
-    )
-
-
-    # --------------------------------------------------------
-    # No file path received
-    # --------------------------------------------------------
-
-    if not path:
-
-        flash(
-            "No file selected."
-        )
-
-        return redirect(
-            url_for("home")
-        )
-
-
-    # --------------------------------------------------------
-    # Check if file still exists
-    # --------------------------------------------------------
-
-    if not os.path.exists(path):
-
-        flash(
-            "File no longer exists."
-        )
-
-        return redirect(
-            url_for(
-                "search",
-                query=query,
-                drive=drive,
-                sort=sort_by
-            )
-        )
-
-
-    # --------------------------------------------------------
-    # Try to open file
-    # --------------------------------------------------------
-
-    try:
-
-        os.startfile(
-            path
-        )
-
-    except Exception as e:
-
-        print(
-            "ERROR OPENING FILE:",
-            e
-        )
-
-        flash(
-            "Atlas could not open this file."
-        )
-
-        return redirect(
-            url_for(
-                "search",
-                query=query,
-                drive=drive,
-                sort=sort_by
-            )
-        )
-
-
-    # --------------------------------------------------------
-    # Return to search results
-    # --------------------------------------------------------
-
-    return redirect(
-        url_for(
-            "search",
-            query=query,
-            drive=drive,
-            sort=sort_by
-        )
-    )
-
-
-# ============================================================
-# OPEN FOLDER
-# ============================================================
-
-@app.route("/open-folder")
-def open_folder():
-
-    path = request.args.get(
-        "path"
-    )
-
-    query = request.args.get(
-        "query",
-        ""
-    )
-
-    drive = request.args.get(
-        "drive",
+    file_type = request.args.get(
+        "file_type",
         "all"
     )
 
@@ -360,6 +266,122 @@ def open_folder():
                 "search",
                 query=query,
                 drive=drive,
+                file_type=file_type,
+                sort=sort_by
+            )
+        )
+
+
+    # --------------------------------------------------------
+    # Try to open file
+    # --------------------------------------------------------
+
+    try:
+
+        os.startfile(
+            path
+        )
+
+    except Exception as e:
+
+        print(
+            "ERROR OPENING FILE:",
+            e
+        )
+
+        flash(
+            "Atlas could not open this file."
+        )
+
+        return redirect(
+            url_for(
+                "search",
+                query=query,
+                drive=drive,
+                file_type=file_type,
+                sort=sort_by
+            )
+        )
+
+
+    # --------------------------------------------------------
+    # Return to search results
+    # --------------------------------------------------------
+
+    return redirect(
+        url_for(
+            "search",
+            query=query,
+            drive=drive,
+            file_type=file_type,
+            sort=sort_by
+        )
+    )
+
+
+# ============================================================
+# OPEN FOLDER
+# ============================================================
+
+@app.route("/open-folder")
+def open_folder():
+
+    path = request.args.get(
+        "path"
+    )
+
+    query = request.args.get(
+        "query",
+        ""
+    )
+
+    drive = request.args.get(
+        "drive",
+        "all"
+    )
+
+    file_type = request.args.get(
+        "file_type",
+        "all"
+    )
+
+    sort_by = request.args.get(
+        "sort",
+        "relevance"
+    )
+
+
+    # --------------------------------------------------------
+    # No file path received
+    # --------------------------------------------------------
+
+    if not path:
+
+        flash(
+            "No file selected."
+        )
+
+        return redirect(
+            url_for("home")
+        )
+
+
+    # --------------------------------------------------------
+    # Check if file still exists
+    # --------------------------------------------------------
+
+    if not os.path.exists(path):
+
+        flash(
+            "File no longer exists."
+        )
+
+        return redirect(
+            url_for(
+                "search",
+                query=query,
+                drive=drive,
+                file_type=file_type,
                 sort=sort_by
             )
         )
@@ -395,6 +417,7 @@ def open_folder():
                 "search",
                 query=query,
                 drive=drive,
+                file_type=file_type,
                 sort=sort_by
             )
         )
@@ -409,6 +432,7 @@ def open_folder():
             "search",
             query=query,
             drive=drive,
+            file_type=file_type,
             sort=sort_by
         )
     )

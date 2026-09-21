@@ -4,196 +4,84 @@
 
 <head>
 
-```
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>Atlas</title>
+    <title>Atlas</title>
 
-<link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/style.css') }}"
->
-```
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 
 </head>
 
+
 <body>
+
 
 <div class="container">
 
-```
-<!-- HEADER -->
 
-<header class="header">
+    <!-- HEADER -->
 
-    <h1>Atlas</h1>
+    <header class="header">
 
-    <p>Your Personal File Search Engine</p>
+        <h1>Atlas</h1>
 
-</header>
+        <p>Your Personal File Search Engine</p>
 
-
-
-<!-- FLASH MESSAGES -->
-
-{% with messages = get_flashed_messages() %}
-
-    {% if messages %}
-
-        <div class="flash-messages">
-
-            {% for message in messages %}
-
-                <div class="flash-message">
-
-                    {{ message }}
-
-                </div>
-
-            {% endfor %}
-
-        </div>
-
-    {% endif %}
-
-{% endwith %}
+    </header>
 
 
 
-<!-- SEARCH -->
+    <!-- FLASH MESSAGES -->
 
-<section class="search-section">
+    {% with messages = get_flashed_messages() %}
 
+        {% if messages %}
 
-    <form
-        action="{{ url_for('search') }}"
-        method="get"
-        class="search-form"
-    >
+            <div class="flash-messages">
 
-        <input
-            type="text"
-            name="query"
-            placeholder="Search for files..."
-            value="{{ query }}"
-            required
-        >
+                {% for message in messages %}
 
+                    <div class="flash-message">
 
-        <input
-            type="hidden"
-            name="drive"
-            value="{{ drive }}"
-        >
+                        {{ message }}
 
-
-        <input
-            type="hidden"
-            name="sort"
-            value="{{ sort_by }}"
-        >
-
-
-        <button type="submit">
-
-            Search
-
-        </button>
-
-    </form>
-
-
-
-    <!-- FILTERS -->
-
-    <div class="filters">
-
-
-        <!-- DRIVE -->
-
-        <form
-            action="{{ url_for('search') }}"
-            method="get"
-            class="filter-form"
-        >
-
-            <input
-                type="hidden"
-                name="query"
-                value="{{ query }}"
-            >
-
-
-            <input
-                type="hidden"
-                name="sort"
-                value="{{ sort_by }}"
-            >
-
-
-            <label for="drive">
-
-                Drive:
-
-            </label>
-
-
-            <select
-                name="drive"
-                id="drive"
-                onchange="this.form.submit()"
-            >
-
-                <option
-                    value="all"
-                    {% if drive == "all" %}
-                        selected
-                    {% endif %}
-                >
-
-                    All Drives
-
-                </option>
-
-
-                {% for available_drive in drives %}
-
-                    <option
-                        value="{{ available_drive }}"
-                        {% if drive == available_drive %}
-                            selected
-                        {% endif %}
-                    >
-
-                        {{ available_drive }}
-
-                    </option>
+                    </div>
 
                 {% endfor %}
 
-            </select>
+            </div>
 
-        </form>
+        {% endif %}
+
+    {% endwith %}
 
 
 
-        <!-- SORT -->
+    <!-- SEARCH -->
+
+    <section class="search-section">
+
 
         <form
             action="{{ url_for('search') }}"
             method="get"
-            class="filter-form"
+            class="search-form"
         >
 
             <input
-                type="hidden"
+                type="text"
                 name="query"
+                placeholder="Search for files..."
                 value="{{ query }}"
+                required
             >
 
 
@@ -204,159 +92,23 @@
             >
 
 
-            <label for="sort">
-
-                Sort:
-
-            </label>
-
-
-            <select
-                name="sort"
-                id="sort"
-                onchange="this.form.submit()"
+            <input
+                type="hidden"
+                name="file_type"
+                value="{{ file_type }}"
             >
 
-                <option
-                    value="relevance"
-                    {% if sort_by == "relevance" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Relevance
-
-                </option>
-
-
-                <option
-                    value="name_asc"
-                    {% if sort_by == "name_asc" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Name A → Z
-
-                </option>
-
-
-                <option
-                    value="name_desc"
-                    {% if sort_by == "name_desc" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Name Z → A
-
-                </option>
-
-
-                <option
-                    value="size_asc"
-                    {% if sort_by == "size_asc" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Size Small → Large
-
-                </option>
-
-
-                <option
-                    value="size_desc"
-                    {% if sort_by == "size_desc" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Size Large → Small
-
-                </option>
-
-
-                <option
-                    value="modified_newest"
-                    {% if sort_by == "modified_newest" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Modified Newest
-
-                </option>
-
-
-                <option
-                    value="modified_oldest"
-                    {% if sort_by == "modified_oldest" %}
-                        selected
-                    {% endif %}
-                >
-
-                    Modified Oldest
-
-                </option>
-
-
-                <option
-                    value="type"
-                    {% if sort_by == "type" %}
-                        selected
-                    {% endif %}
-                >
-
-                    File Type
-
-                </option>
-
-            </select>
-
-        </form>
-
-    </div>
-
-</section>
-
-
-
-<!-- SCAN -->
-
-<section class="scan-section">
-
-    <h2>Index Files</h2>
-
-    <p>
-
-        Scan a folder to add its files to Atlas.
-
-    </p>
-
-
-    <div class="scan-actions">
-
-
-        <!-- NORMAL SCAN -->
-
-        <form
-            class="scan-form"
-            action="{{ url_for('scan') }}"
-            method="get"
-        >
 
             <input
-                type="text"
-                name="folder"
-                placeholder="Enter folder path (e.g. D:\Downloads)"
-                required
+                type="hidden"
+                name="sort"
+                value="{{ sort_by }}"
             >
 
 
             <button type="submit">
 
-                Scan Folder
+                Search
 
             </button>
 
@@ -364,258 +116,903 @@
 
 
 
-        <!-- QUICK SCAN -->
+        <!-- FILTERS -->
 
-        <form
-            class="quick-scan-form"
-            action="{{ url_for('quick_scan') }}"
-            method="get"
-        >
+        <div class="filters">
 
-            <button
-                type="submit"
-                class="quick-scan-button"
+
+            <!-- DRIVE -->
+
+            <form
+                action="{{ url_for('search') }}"
+                method="get"
+                class="filter-form"
             >
 
-                🔄 Quick Scan
-
-            </button>
-
-        </form>
-
-    </div>
-
-</section>
+                <input
+                    type="hidden"
+                    name="query"
+                    value="{{ query }}"
+                >
 
 
-
-<!-- RESULTS -->
-
-<section class="results-section">
-
-
-    {% if results %}
+                <input
+                    type="hidden"
+                    name="file_type"
+                    value="{{ file_type }}"
+                >
 
 
-        <h2>
+                <input
+                    type="hidden"
+                    name="sort"
+                    value="{{ sort_by }}"
+                >
 
-            Search Results
 
-        </h2>
+                <label for="drive">
+
+                    Drive:
+
+                </label>
 
 
-        <p class="result-count">
+                <select
+                    name="drive"
+                    id="drive"
+                    onchange="this.form.submit()"
+                >
 
-            Found
+                    <option
+                        value="all"
+                        {% if drive == "all" %}
+                            selected
+                        {% endif %}
+                    >
 
-            {{ results|length }}
+                        All Drives
 
-            file(s)
+                    </option>
+
+
+                    {% for available_drive in drives %}
+
+                        <option
+                            value="{{ available_drive }}"
+                            {% if drive == available_drive %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {{ available_drive }}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </form>
+
+
+
+            <!-- FILE TYPE -->
+
+            <form
+                action="{{ url_for('search') }}"
+                method="get"
+                class="filter-form"
+            >
+
+                <input
+                    type="hidden"
+                    name="query"
+                    value="{{ query }}"
+                >
+
+
+                <input
+                    type="hidden"
+                    name="drive"
+                    value="{{ drive }}"
+                >
+
+
+                <input
+                    type="hidden"
+                    name="sort"
+                    value="{{ sort_by }}"
+                >
+
+
+                <label for="file_type">
+
+                    Type:
+
+                </label>
+
+
+                <select
+                    name="file_type"
+                    id="file_type"
+                    onchange="this.form.submit()"
+                >
+
+                    <option
+                        value="all"
+                        {% if file_type == "all" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        All Types
+
+                    </option>
+
+
+                    <!-- DOCUMENTS -->
+
+                    <option
+                        value=".pdf"
+                        {% if file_type == ".pdf" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        PDF
+
+                    </option>
+
+
+                    <option
+                        value=".docx"
+                        {% if file_type == ".docx" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Word
+
+                    </option>
+
+
+                    <option
+                        value=".xlsx"
+                        {% if file_type == ".xlsx" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Excel
+
+                    </option>
+
+
+                    <option
+                        value=".pptx"
+                        {% if file_type == ".pptx" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        PowerPoint
+
+                    </option>
+
+
+                    <option
+                        value=".txt"
+                        {% if file_type == ".txt" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Text
+
+                    </option>
+
+
+                    <!-- IMAGES -->
+
+                    <option
+                        value=".jpg"
+                        {% if file_type == ".jpg" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        JPG
+
+                    </option>
+
+
+                    <option
+                        value=".jpeg"
+                        {% if file_type == ".jpeg" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        JPEG
+
+                    </option>
+
+
+                    <option
+                        value=".png"
+                        {% if file_type == ".png" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        PNG
+
+                    </option>
+
+
+                    <option
+                        value=".gif"
+                        {% if file_type == ".gif" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        GIF
+
+                    </option>
+
+
+                    <option
+                        value=".svg"
+                        {% if file_type == ".svg" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        SVG
+
+                    </option>
+
+
+                    <!-- VIDEO -->
+
+                    <option
+                        value=".mp4"
+                        {% if file_type == ".mp4" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        MP4
+
+                    </option>
+
+
+                    <option
+                        value=".mkv"
+                        {% if file_type == ".mkv" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        MKV
+
+                    </option>
+
+
+                    <option
+                        value=".avi"
+                        {% if file_type == ".avi" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        AVI
+
+                    </option>
+
+
+                    <!-- AUDIO -->
+
+                    <option
+                        value=".mp3"
+                        {% if file_type == ".mp3" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        MP3
+
+                    </option>
+
+
+                    <option
+                        value=".wav"
+                        {% if file_type == ".wav" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        WAV
+
+                    </option>
+
+
+                    <!-- ARCHIVES -->
+
+                    <option
+                        value=".zip"
+                        {% if file_type == ".zip" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        ZIP
+
+                    </option>
+
+
+                    <option
+                        value=".rar"
+                        {% if file_type == ".rar" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        RAR
+
+                    </option>
+
+
+                    <option
+                        value=".7z"
+                        {% if file_type == ".7z" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        7Z
+
+                    </option>
+
+
+                    <!-- PROGRAMS -->
+
+                    <option
+                        value=".exe"
+                        {% if file_type == ".exe" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        EXE
+
+                    </option>
+
+
+                    <option
+                        value=".msi"
+                        {% if file_type == ".msi" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        MSI
+
+                    </option>
+
+
+                    <!-- CODE -->
+
+                    <option
+                        value=".py"
+                        {% if file_type == ".py" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Python
+
+                    </option>
+
+
+                    <option
+                        value=".js"
+                        {% if file_type == ".js" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        JavaScript
+
+                    </option>
+
+
+                    <option
+                        value=".html"
+                        {% if file_type == ".html" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        HTML
+
+                    </option>
+
+
+                    <option
+                        value=".css"
+                        {% if file_type == ".css" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        CSS
+
+                    </option>
+
+                </select>
+
+            </form>
+
+
+
+            <!-- SORT -->
+
+            <form
+                action="{{ url_for('search') }}"
+                method="get"
+                class="filter-form"
+            >
+
+                <input
+                    type="hidden"
+                    name="query"
+                    value="{{ query }}"
+                >
+
+
+                <input
+                    type="hidden"
+                    name="drive"
+                    value="{{ drive }}"
+                >
+
+
+                <input
+                    type="hidden"
+                    name="file_type"
+                    value="{{ file_type }}"
+                >
+
+
+                <label for="sort">
+
+                    Sort:
+
+                </label>
+
+
+                <select
+                    name="sort"
+                    id="sort"
+                    onchange="this.form.submit()"
+                >
+
+                    <option
+                        value="relevance"
+                        {% if sort_by == "relevance" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Relevance
+
+                    </option>
+
+
+                    <option
+                        value="name_asc"
+                        {% if sort_by == "name_asc" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Name A → Z
+
+                    </option>
+
+
+                    <option
+                        value="name_desc"
+                        {% if sort_by == "name_desc" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Name Z → A
+
+                    </option>
+
+
+                    <option
+                        value="size_asc"
+                        {% if sort_by == "size_asc" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Size Small → Large
+
+                    </option>
+
+
+                    <option
+                        value="size_desc"
+                        {% if sort_by == "size_desc" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Size Large → Small
+
+                    </option>
+
+
+                    <option
+                        value="modified_newest"
+                        {% if sort_by == "modified_newest" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Modified Newest
+
+                    </option>
+
+
+                    <option
+                        value="modified_oldest"
+                        {% if sort_by == "modified_oldest" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        Modified Oldest
+
+                    </option>
+
+
+                    <option
+                        value="type"
+                        {% if sort_by == "type" %}
+                            selected
+                        {% endif %}
+                    >
+
+                        File Type
+
+                    </option>
+
+                </select>
+
+            </form>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- SCAN -->
+
+    <section class="scan-section">
+
+        <h2>Index Files</h2>
+
+        <p>
+
+            Scan a folder to add its files to Atlas.
 
         </p>
 
 
-
-        <div class="results">
-
-
-            {% for file in results %}
+        <div class="scan-actions">
 
 
-                <div class="result-card">
+            <!-- NORMAL SCAN -->
+
+            <form
+                class="scan-form"
+                action="{{ url_for('scan') }}"
+                method="get"
+            >
+
+                <input
+                    type="text"
+                    name="folder"
+                    placeholder="Enter folder path (e.g. D:\Downloads)"
+                    required
+                >
 
 
-                    <div class="file-info">
+                <button type="submit">
+
+                    Scan Folder
+
+                </button>
+
+            </form>
 
 
-                        <!-- FILE NAME -->
 
-                        <h3>
+            <!-- QUICK SCAN -->
 
-                            {{ file[0] }}
+            <form
+                class="quick-scan-form"
+                action="{{ url_for('quick_scan') }}"
+                method="get"
+            >
 
-                        </h3>
+                <button
+                    type="submit"
+                    class="quick-scan-button"
+                >
 
+                    🔄 Quick Scan
 
-                        <!-- FILE PATH -->
+                </button>
 
-                        <p class="file-path">
+            </form>
 
-                            {{ file[1] }}
+        </div>
 
-                        </p>
-
-
-                        <!-- FILE DETAILS -->
-
-                        <div class="file-details">
-
-                            <span>
-
-                                Size:
-
-                                {{ file[3] }}
-
-                            </span>
+    </section>
 
 
-                            <span>
 
-                                Modified:
+    <!-- RESULTS -->
 
-                                {{ file[2] }}
+    <section class="results-section">
 
-                            </span>
+
+        {% if results %}
+
+
+            <h2>
+
+                Search Results
+
+            </h2>
+
+
+            <p class="result-count">
+
+                Found
+
+                {{ results|length }}
+
+                file(s)
+
+            </p>
+
+
+
+            <div class="results">
+
+
+                {% for file in results %}
+
+
+                    <div class="result-card">
+
+
+                        <div class="file-info">
+
+
+                            <!-- FILE NAME -->
+
+                            <h3>
+
+                                {{ file[0] }}
+
+                            </h3>
+
+
+                            <!-- FILE PATH -->
+
+                            <p class="file-path">
+
+                                {{ file[1] }}
+
+                            </p>
+
+
+                            <!-- FILE DETAILS -->
+
+                            <div class="file-details">
+
+                                <span>
+
+                                    Size:
+
+                                    {{ file[3] }}
+
+                                </span>
+
+
+                                <span>
+
+                                    Modified:
+
+                                    {{ file[2] }}
+
+                                </span>
+
+                            </div>
+
 
                         </div>
+
+
+
+                        <!-- OPEN FILE -->
+
+                        <form
+                            action="{{ url_for('openfile') }}"
+                            method="get"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="path"
+                                value="{{ file[1] }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="query"
+                                value="{{ query }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="drive"
+                                value="{{ drive }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="file_type"
+                                value="{{ file_type }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="sort"
+                                value="{{ sort_by }}"
+                            >
+
+
+                            <button
+                                type="submit"
+                                class="open-button"
+                            >
+
+                                Open File
+
+                            </button>
+
+                        </form>
+
+
+
+                        <!-- OPEN FOLDER -->
+
+                        <form
+                            action="{{ url_for('open_folder') }}"
+                            method="get"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="path"
+                                value="{{ file[1] }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="query"
+                                value="{{ query }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="drive"
+                                value="{{ drive }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="file_type"
+                                value="{{ file_type }}"
+                            >
+
+
+                            <input
+                                type="hidden"
+                                name="sort"
+                                value="{{ sort_by }}"
+                            >
+
+
+                            <button
+                                type="submit"
+                                class="open-folder-button"
+                            >
+
+                                Open Folder
+
+                            </button>
+
+                        </form>
 
 
                     </div>
 
 
-
-                    <!-- OPEN FILE -->
-
-                    <form
-                        action="{{ url_for('openfile') }}"
-                        method="get"
-                    >
-
-                        <!-- file[1] is the actual file path -->
-
-                        <input
-                            type="hidden"
-                            name="path"
-                            value="{{ file[1] }}"
-                        >
+                {% endfor %}
 
 
-                        <input
-                            type="hidden"
-                            name="query"
-                            value="{{ query }}"
-                        >
+            </div>
 
 
-                        <input
-                            type="hidden"
-                            name="drive"
-                            value="{{ drive }}"
-                        >
+        {% elif query %}
 
 
-                        <input
-                            type="hidden"
-                            name="sort"
-                            value="{{ sort_by }}"
-                        >
+            <!-- NO RESULTS -->
+
+            <div class="no-results">
+
+                <h2>
+
+                    No files found
+
+                </h2>
 
 
-                        <button
-                            type="submit"
-                            class="open-button"
-                        >
+                <p>
 
-                            Open File
+                    Atlas couldn't find any files matching
 
-                        </button>
+                    "{{ query }}".
 
-                    </form>
+                </p>
 
+            </div>
 
 
-                    <!-- OPEN FOLDER -->
-
-                    <form
-                        action="{{ url_for('open_folder') }}"
-                        method="get"
-                    >
-
-                        <input
-                            type="hidden"
-                            name="path"
-                            value="{{ file[1] }}"
-                        >
+        {% endif %}
 
 
-                        <input
-                            type="hidden"
-                            name="query"
-                            value="{{ query }}"
-                        >
+    </section>
 
-
-                        <input
-                            type="hidden"
-                            name="drive"
-                            value="{{ drive }}"
-                        >
-
-
-                        <input
-                            type="hidden"
-                            name="sort"
-                            value="{{ sort_by }}"
-                        >
-
-
-                        <button
-                            type="submit"
-                            class="open-folder-button"
-                        >
-
-                            Open Folder
-
-                        </button>
-
-                    </form>
-
-
-                </div>
-
-
-            {% endfor %}
-
-
-        </div>
-
-
-    {% elif query %}
-
-
-        <!-- NO RESULTS -->
-
-        <div class="no-results">
-
-            <h2>
-
-                No files found
-
-            </h2>
-
-
-            <p>
-
-                Atlas couldn't find any files matching
-
-                "{{ query }}".
-
-            </p>
-
-        </div>
-
-
-    {% endif %}
-
-
-</section>
-```
 
 </div>
+
+
 
 <script
     src="{{ url_for('static', filename='js/script.js') }}"
 ></script>
+
 
 </body>
 
