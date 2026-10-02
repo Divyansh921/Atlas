@@ -7,7 +7,8 @@ from flask import (
     request,
     redirect,
     url_for,
-    flash
+    flash,
+    jsonify
 )
 
 from database.db import (
@@ -17,7 +18,8 @@ from database.db import (
     search_files,
     get_available_drives,
     quick_scan_location,
-    get_indexed_locations
+    get_indexed_locations,
+    get_search_suggestions
 )
 
 from scanner.scan import scan_folder
@@ -99,6 +101,54 @@ def search():
         file_type=file_type,
         sort_by=sort_by,
         drives=drives
+    )
+
+
+# ============================================================
+# SEARCH SUGGESTIONS
+# ============================================================
+
+@app.route("/suggestions")
+def suggestions():
+
+    query = request.args.get(
+        "query",
+        ""
+    ).strip()
+
+    drive = request.args.get(
+        "drive",
+        "all"
+    )
+
+    file_type = request.args.get(
+        "file_type",
+        "all"
+    )
+
+
+    # --------------------------------------------------------
+    # Do not show suggestions for very short searches
+    # --------------------------------------------------------
+
+    if len(query) < 2:
+
+        return jsonify([])
+
+
+    # --------------------------------------------------------
+    # Get suggestions from database
+    # --------------------------------------------------------
+
+    suggestions = get_search_suggestions(
+        query,
+        drive,
+        file_type
+    )
+
+
+    return jsonify(
+        suggestions
     )
 
 

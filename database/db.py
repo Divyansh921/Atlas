@@ -1259,3 +1259,135 @@ def search_files(
         )
 
     return formatted_results
+# ============================================================
+# SEARCH SUGGESTIONS
+# ============================================================
+
+def get_search_suggestions(
+    query,
+    drive="all",
+    file_type="all"
+):
+
+    connection = sqlite3.connect("atlas.db")
+    cursor = connection.cursor()
+
+    query = query.strip()
+
+    if not query:
+
+        connection.close()
+
+        return []
+
+
+    # --------------------------------------------------------
+    # Search filenames beginning with or containing the query
+    # --------------------------------------------------------
+
+    sql = """
+        SELECT
+            file_name,
+            file_path
+
+        FROM files
+
+        WHERE LOWER(file_name) LIKE ?
+    """
+
+    parameters = [
+        f"%{query.lower()}%"
+    ]
+
+
+    # --------------------------------------------------------
+    # Drive filter
+    # --------------------------------------------------------
+
+    if drive and drive != "all":
+
+        sql += """
+            AND UPPER(file_path) LIKE ?
+        """
+
+        parameters.append(
+            f"{drive.upper()}%"
+        )
+
+
+    # --------------------------------------------------------
+    # File type filter
+    # --------------------------------------------------------
+
+    if file_type and file_type != "all":
+
+        selected_extension = file_type.lower()
+
+        if not selected_extension.startswith("."):
+
+            selected_extension = "." + selected_extension
+
+        sql += """
+            AND LOWER(extension) = ?
+        """
+
+        parameters.append(
+            selected_extension
+        )
+
+
+    # --------------------------------------------------------
+    # Limit suggestions
+    # --------------------------------------------------------
+
+    sql += """
+        ORDER BY
+            CASE
+                WHEN LOWER(file_name) LIKE ? THEN 0
+                ELSE 1
+            END,
+            file_name COLLATE NOCASE ASC
+
+        LIMIT 8
+    """
+
+    parameters.append(
+        f"{query.lower()}%"
+    )
+
+
+    cursor.execute(
+        sql,
+        parameters
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+
+    # --------------------------------------------------------
+    # Remove duplicate filenames
+    # --------------------------------------------------------
+
+    suggestions = []
+
+    seen = set()
+
+    for file_name, file_path in rows:
+
+        key = file_name.lower()
+
+        if key in seen:
+
+            continue
+
+        seen.add(key)
+
+        suggestions.append({
+            "name": file_name,
+            "path": file_path
+        })
+
+
+    return suggestions
