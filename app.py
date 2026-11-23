@@ -1,5 +1,7 @@
 import os
 import subprocess
+import threading
+import logging
 
 from flask import (
     Flask,
@@ -19,11 +21,16 @@ from database.db import (
     get_available_drives,
     quick_scan_location,
     get_indexed_locations,
-    get_search_suggestions
+    get_search_suggestions,
+    natural_language_search,
+    index_all_content,
+    generate_all_embeddings,
+    get_indexing_status
 )
 
 from scanner.scan import scan_folder
 
+logger = logging.getLogger("atlas")
 
 app = Flask(__name__)
 app.secret_key = "secret_key"
@@ -52,6 +59,7 @@ def home():
         drive="all",
         file_type="all",
         sort_by="relevance",
+        mode="all",
         drives=drives,
         message=""
     )
@@ -84,12 +92,28 @@ def search():
         "relevance"
     )
 
-    results = search_files(
-        query,
-        drive,
-        sort_by,
-        file_type
+    mode = request.args.get(
+        "mode",
+        "all"
     )
+
+    if mode == "semantic":
+
+        results = natural_language_search(
+            query,
+            drive=drive,
+            file_type=file_type
+        )
+
+    else:
+
+        results = search_files(
+            query,
+            drive=drive,
+            sort_by=sort_by,
+            file_type=file_type,
+            search_mode=mode
+        )
 
     drives = get_available_drives()
 
@@ -100,6 +124,7 @@ def search():
         drive=drive,
         file_type=file_type,
         sort_by=sort_by,
+        mode=mode,
         drives=drives
     )
 
@@ -190,8 +215,15 @@ def scan():
         location_id
     )
 
+    # Automatically index content for newly scanned files in the background
+    threading.Thread(
+        target=index_all_content,
+        daemon=True
+    ).start()
+
     flash(
-        f"Successfully indexed {len(files)} files."
+        f"Successfully indexed {len(files)} files. "
+        f"Document content indexing started in the background."
     )
 
     return redirect(
@@ -242,6 +274,14 @@ def quick_scan():
 
         total_deleted += result["deleted"]
 
+    # Re-index content for newly added / modified files in background
+    if total_added > 0 or total_modified > 0:
+
+        threading.Thread(
+            target=index_all_content,
+            daemon=True
+        ).start()
+
     flash(
         f"Quick Scan complete — "
         f"{total_added} added, "
@@ -252,6 +292,119 @@ def quick_scan():
     return redirect(
         url_for("home")
     )
+
+
+# ============================================================
+# CONTENT & EMBEDDINGS INDEXING ROUTES
+# ============================================================
+
+_indexing_lock = threading.Lock()
+_indexing_status_state = {
+    "indexing_content": False,
+    "indexing_embeddings": False
+}
+
+
+@app.route("/index-content")
+def index_content_route():
+
+    def task():
+
+        with _indexing_lock:
+
+            _indexing_status_state["indexing_content"] = True
+
+        try:
+
+            res = index_all_content()
+
+            logger.info(
+                "Content indexing complete: %s",
+                res
+            )
+
+        except Exception as e:
+
+            logger.error(
+                "Content indexing failed: %s",
+                e
+            )
+
+        finally:
+
+            with _indexing_lock:
+
+                _indexing_status_state["indexing_content"] = False
+
+    threading.Thread(
+        target=task,
+        daemon=True
+    ).start()
+
+    flash(
+        "Document content indexing started in the background."
+    )
+
+    return redirect(
+        url_for("home")
+    )
+
+
+@app.route("/generate-embeddings")
+def generate_embeddings_route():
+
+    def task():
+
+        with _indexing_lock:
+
+            _indexing_status_state["indexing_embeddings"] = True
+
+        try:
+
+            res = generate_all_embeddings()
+
+            logger.info(
+                "Embedding generation complete: %s",
+                res
+            )
+
+        except Exception as e:
+
+            logger.error(
+                "Embedding generation failed: %s",
+                e
+            )
+
+        finally:
+
+            with _indexing_lock:
+
+                _indexing_status_state["indexing_embeddings"] = False
+
+    threading.Thread(
+        target=task,
+        daemon=True
+    ).start()
+
+    flash(
+        "AI Semantic Indexing started in the background."
+    )
+
+    return redirect(
+        url_for("home")
+    )
+
+
+@app.route("/indexing-status")
+def indexing_status_route():
+
+    status = get_indexing_status()
+
+    status.update(
+        _indexing_status_state
+    )
+
+    return jsonify(status)
 
 
 # ============================================================
@@ -283,6 +436,11 @@ def openfile():
     sort_by = request.args.get(
         "sort",
         "relevance"
+    )
+
+    mode = request.args.get(
+        "mode",
+        "all"
     )
 
 
@@ -317,7 +475,8 @@ def openfile():
                 query=query,
                 drive=drive,
                 file_type=file_type,
-                sort=sort_by
+                sort=sort_by,
+                mode=mode
             )
         )
 
@@ -349,7 +508,8 @@ def openfile():
                 query=query,
                 drive=drive,
                 file_type=file_type,
-                sort=sort_by
+                sort=sort_by,
+                mode=mode
             )
         )
 
@@ -364,7 +524,8 @@ def openfile():
             query=query,
             drive=drive,
             file_type=file_type,
-            sort=sort_by
+            sort=sort_by,
+            mode=mode
         )
     )
 
@@ -400,6 +561,11 @@ def open_folder():
         "relevance"
     )
 
+    mode = request.args.get(
+        "mode",
+        "all"
+    )
+
 
     # --------------------------------------------------------
     # No file path received
@@ -432,7 +598,8 @@ def open_folder():
                 query=query,
                 drive=drive,
                 file_type=file_type,
-                sort=sort_by
+                sort=sort_by,
+                mode=mode
             )
         )
 
@@ -468,7 +635,8 @@ def open_folder():
                 query=query,
                 drive=drive,
                 file_type=file_type,
-                sort=sort_by
+                sort=sort_by,
+                mode=mode
             )
         )
 
@@ -483,7 +651,8 @@ def open_folder():
             query=query,
             drive=drive,
             file_type=file_type,
-            sort=sort_by
+            sort=sort_by,
+            mode=mode
         )
     )
 

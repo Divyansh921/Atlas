@@ -86,6 +86,7 @@
                 <input type="hidden" name="drive" value="{{ drive }}">
                 <input type="hidden" name="file_type" value="{{ file_type }}">
                 <input type="hidden" name="sort" value="{{ sort_by }}">
+                <input type="hidden" name="mode" value="{{ mode }}">
 
                 <button type="submit" class="primary-button">
                     <span>Search</span>
@@ -100,8 +101,34 @@
 
                 <form action="{{ url_for('search') }}" method="get" class="filter-form">
                     <input type="hidden" name="query" value="{{ query }}">
+                    <input type="hidden" name="drive" value="{{ drive }}">
                     <input type="hidden" name="file_type" value="{{ file_type }}">
                     <input type="hidden" name="sort" value="{{ sort_by }}">
+
+                    <label for="mode">Mode</label>
+                    <div class="select-wrap">
+                        <select name="mode" id="mode" onchange="this.form.submit()">
+                            <option value="all" {% if mode == "all" %}selected{% endif %}>
+                                All (Name + Content)
+                            </option>
+                            <option value="filename" {% if mode == "filename" %}selected{% endif %}>
+                                Filename Only
+                            </option>
+                            <option value="content" {% if mode == "content" %}selected{% endif %}>
+                                Content Only
+                            </option>
+                            <option value="semantic" {% if mode == "semantic" %}selected{% endif %}>
+                                Natural Language (AI)
+                            </option>
+                        </select>
+                    </div>
+                </form>
+
+                <form action="{{ url_for('search') }}" method="get" class="filter-form">
+                    <input type="hidden" name="query" value="{{ query }}">
+                    <input type="hidden" name="file_type" value="{{ file_type }}">
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <input type="hidden" name="mode" value="{{ mode }}">
 
                     <label for="drive">Drive</label>
                     <div class="select-wrap">
@@ -125,6 +152,7 @@
                     <input type="hidden" name="query" value="{{ query }}">
                     <input type="hidden" name="drive" value="{{ drive }}">
                     <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <input type="hidden" name="mode" value="{{ mode }}">
 
                     <label for="file_type">Type</label>
                     <div class="select-wrap">
@@ -132,10 +160,13 @@
                             <option value="all" {% if file_type == "all" %}selected{% endif %}>All Types</option>
 
                             <option value=".pdf" {% if file_type == ".pdf" %}selected{% endif %}>PDF</option>
-                            <option value=".docx" {% if file_type == ".docx" %}selected{% endif %}>Word</option>
+                            <option value=".docx" {% if file_type == ".docx" %}selected{% endif %}>Word (.docx)</option>
+                            <option value=".doc" {% if file_type == ".doc" %}selected{% endif %}>Word (.doc)</option>
                             <option value=".xlsx" {% if file_type == ".xlsx" %}selected{% endif %}>Excel</option>
                             <option value=".pptx" {% if file_type == ".pptx" %}selected{% endif %}>PowerPoint</option>
-                            <option value=".txt" {% if file_type == ".txt" %}selected{% endif %}>Text</option>
+                            <option value=".txt" {% if file_type == ".txt" %}selected{% endif %}>Text (.txt)</option>
+                            <option value=".md" {% if file_type == ".md" %}selected{% endif %}>Markdown (.md)</option>
+                            <option value=".csv" {% if file_type == ".csv" %}selected{% endif %}>CSV</option>
 
                             <option value=".jpg" {% if file_type == ".jpg" %}selected{% endif %}>JPG</option>
                             <option value=".jpeg" {% if file_type == ".jpeg" %}selected{% endif %}>JPEG</option>
@@ -169,6 +200,7 @@
                     <input type="hidden" name="query" value="{{ query }}">
                     <input type="hidden" name="drive" value="{{ drive }}">
                     <input type="hidden" name="file_type" value="{{ file_type }}">
+                    <input type="hidden" name="mode" value="{{ mode }}">
 
                     <label for="sort">Sort</label>
                     <div class="select-wrap">
@@ -246,9 +278,31 @@
                     action="{{ url_for('quick_scan') }}"
                     method="get"
                 >
-                    <button type="submit" class="ghost-button quick-scan-button">
+                    <button type="submit" class="ghost-button quick-scan-button" title="Check indexed locations for added, modified, or deleted files">
                         <span aria-hidden="true">↻</span>
                         Quick Scan
+                    </button>
+                </form>
+
+                <form
+                    class="quick-scan-form"
+                    action="{{ url_for('index_content_route') }}"
+                    method="get"
+                >
+                    <button type="submit" class="ghost-button quick-scan-button" title="Extract and index text inside PDF, DOCX, DOC, TXT, MD, CSV, PPTX, XLSX">
+                        <span aria-hidden="true">📄</span>
+                        Index Content
+                    </button>
+                </form>
+
+                <form
+                    class="quick-scan-form"
+                    action="{{ url_for('generate_embeddings_route') }}"
+                    method="get"
+                >
+                    <button type="submit" class="ghost-button quick-scan-button" title="Build local semantic vector index for Natural Language Search">
+                        <span aria-hidden="true">🧠</span>
+                        AI Index
                     </button>
                 </form>
 
@@ -300,6 +354,29 @@
                                             <span class="meta-label">Modified</span>
                                             <span class="meta-value">{{ file[2] }}</span>
                                         </span>
+                                        {% if file|length > 4 and file[4] %}
+                                            {% if file[4] == 'both' %}
+                                                <span class="meta-pill match-pill match-both" title="Matched both filename and document content">
+                                                    <span class="meta-label">Match</span>
+                                                    <span class="meta-value">Name + Content</span>
+                                                </span>
+                                            {% elif file[4] == 'content' %}
+                                                <span class="meta-pill match-pill match-content" title="Matched inside document content">
+                                                    <span class="meta-label">Match</span>
+                                                    <span class="meta-value">Content</span>
+                                                </span>
+                                            {% elif file[4] == 'semantic' %}
+                                                <span class="meta-pill match-pill match-semantic" title="Matched via natural language semantic search">
+                                                    <span class="meta-label">Match</span>
+                                                    <span class="meta-value">Natural Language</span>
+                                                </span>
+                                            {% elif file[4] == 'filename' %}
+                                                <span class="meta-pill match-pill match-filename" title="Matched filename">
+                                                    <span class="meta-label">Match</span>
+                                                    <span class="meta-value">Filename</span>
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
                                 </div>
 
@@ -314,6 +391,7 @@
                                         <input type="hidden" name="drive" value="{{ drive }}">
                                         <input type="hidden" name="file_type" value="{{ file_type }}">
                                         <input type="hidden" name="sort" value="{{ sort_by }}">
+                                        <input type="hidden" name="mode" value="{{ mode }}">
 
                                         <button type="submit" class="open-button primary-button">
                                             Open File
@@ -329,6 +407,7 @@
                                         <input type="hidden" name="drive" value="{{ drive }}">
                                         <input type="hidden" name="file_type" value="{{ file_type }}">
                                         <input type="hidden" name="sort" value="{{ sort_by }}">
+                                        <input type="hidden" name="mode" value="{{ mode }}">
 
                                         <button type="submit" class="open-folder-button ghost-button">
                                             Open Folder

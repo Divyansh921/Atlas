@@ -1,0 +1,188 @@
+[
+  {
+    "name": "Database initialization, schema migration & FTS5/Embeddings tables",
+    "expected": "file_content, content_last_indexed, files_fts, file_embeddings present",
+    "actual": "cols=True, fts=True, emb=True",
+    "status": "PASS"
+  },
+  {
+    "name": "Folder scanning and file metadata indexing",
+    "expected": "Scanned files >= 8",
+    "actual": "Scanned 10 files",
+    "status": "PASS"
+  },
+  {
+    "name": "TXT content extraction (.txt)",
+    "expected": "Contains 'Process Scheduling'",
+    "actual": "Found keyword (len=89)",
+    "status": "PASS"
+  },
+  {
+    "name": "MD content extraction (.md)",
+    "expected": "Contains 'Boyce Codd'",
+    "actual": "Found keyword (len=98)",
+    "status": "PASS"
+  },
+  {
+    "name": "CSV content extraction (.csv)",
+    "expected": "Contains 'SKU-8821'",
+    "actual": "Found keyword (len=162)",
+    "status": "PASS"
+  },
+  {
+    "name": "DOCX content extraction (.docx)",
+    "expected": "Contains 'neural network'",
+    "actual": "Found keyword (len=132)",
+    "status": "PASS"
+  },
+  {
+    "name": "PPTX content extraction (.pptx)",
+    "expected": "Contains 'Transmission Control Protocol'",
+    "actual": "Found keyword (len=109)",
+    "status": "PASS"
+  },
+  {
+    "name": "XLSX content extraction (.xlsx)",
+    "expected": "Contains 'Natural Language Processing'",
+    "actual": "Found keyword (len=200)",
+    "status": "PASS"
+  },
+  {
+    "name": "PDF content extraction (.pdf)",
+    "expected": "Contains 'Consensus Protocols'",
+    "actual": "Found keyword (len=54)",
+    "status": "PASS"
+  },
+  {
+    "name": "Legacy DOC handling (.doc)",
+    "expected": "Graceful text extraction or fallback without error",
+    "actual": "Returned text len=0",
+    "status": "PASS"
+  },
+  {
+    "name": "Corrupted file resilience",
+    "expected": "Returns empty string without crashing",
+    "actual": "Returned safely (len=0)",
+    "status": "PASS"
+  },
+  {
+    "name": "Content indexing into SQLite FTS5",
+    "expected": "Indexed >= 7 documents",
+    "actual": "Indexed 9 files",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 1: Filename search ('os_notes')",
+    "expected": "Finds os_notes.txt",
+    "actual": "Matches: ['os_notes.txt']",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: TXT Content Search ('Semaphore Mutex')",
+    "expected": "Matches os_notes.txt with match_type in ('content', 'both')",
+    "actual": "Matches: ['queue.py', 'queue.py'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: MD Content Search ('Boyce Codd BCNF')",
+    "expected": "Matches database_guide.md with match_type in ('content', 'both')",
+    "actual": "Matches: ['database_guide.md'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: CSV Content Search ('Wireless Quantum Sensor')",
+    "expected": "Matches inventory_records.csv with match_type in ('content', 'both')",
+    "actual": "Matches: ['inventory_records.csv'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: DOCX Content Search ('mitigation strategies')",
+    "expected": "Matches ai_ethics_framework.docx with match_type in ('content', 'both')",
+    "actual": "Matches: ['pdf-ppt.pptx', 'Deep Learning (2).pdf'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: PPTX Content Search ('Transmission Control Protocol')",
+    "expected": "Matches networking_lecture.pptx with match_type in ('content', 'both')",
+    "actual": "Matches: ['SSL.py', 'SSL.py'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: XLSX Content Search ('Enterprise Cloud Infrastructure')",
+    "expected": "Matches quarterly_budget_analysis.xlsx with match_type in ('content', 'both')",
+    "actual": "Matches: ['app.py', 'app.py'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 2: PDF Content Search ('Consensus Protocols Paxos')",
+    "expected": "Matches distributed_systems.pdf with match_type in ('content', 'both')",
+    "actual": "Matches: ['distributed_systems.pdf'], match_type=content",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 1+2: Combined search distinguishes filename vs content",
+    "expected": "Returns match_type in result tuple",
+    "actual": "Found: database_guide.md, match_type: filename",
+    "status": "PASS"
+  },
+  {
+    "name": "Extension filter (file_type='.xlsx')",
+    "expected": "Only returns .xlsx files",
+    "actual": "Count: 3",
+    "status": "PASS"
+  },
+  {
+    "name": "Sorting functionality (sort_by='name_asc')",
+    "expected": "Executes without error",
+    "actual": "Returned 534 results",
+    "status": "PASS"
+  },
+  {
+    "name": "Quick Scan detection of modified files",
+    "expected": "modified >= 1",
+    "actual": "added=0, modified=1, deleted=0",
+    "status": "PASS"
+  },
+  {
+    "name": "Re-indexed modified file content search",
+    "expected": "Finds 'CyberSecurityEncryptionAlgorithm' in os_notes.txt",
+    "actual": "Matches: ['os_notes.txt']",
+    "status": "PASS"
+  },
+  {
+    "name": "Embedding generation for documents",
+    "expected": "Embeddings stored >= 6",
+    "actual": "Stored: 7",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 3: Natural Language ('How computers talk to each other across the internet')",
+    "expected": "Ranks networking_lecture.pptx in top results",
+    "actual": "Top hit: networking_lecture.pptx, match_type=semantic",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 3: Natural Language ('Preventing system freezes and thread deadlocks')",
+    "expected": "Ranks os_notes.txt in top results",
+    "actual": "Top hit: os_notes.txt, match_type=semantic",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 3: Natural Language ('Company quarterly earnings and revenue margins')",
+    "expected": "Ranks quarterly_budget_analysis.xlsx in top results",
+    "actual": "Top hit: quarterly_budget_analysis.xlsx, match_type=semantic",
+    "status": "PASS"
+  },
+  {
+    "name": "Layer 3: Natural Language ('How to design relational database schemas cleanly')",
+    "expected": "Ranks database_guide.md in top results",
+    "actual": "Top hit: database_guide.md, match_type=semantic",
+    "status": "PASS"
+  },
+  {
+    "name": "Search suggestions",
+    "expected": "Returns suggestion for 'os_note'",
+    "actual": "Suggestions: ['os_notes.txt']",
+    "status": "PASS"
+  }
+]
