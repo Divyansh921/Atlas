@@ -57,7 +57,7 @@ def home():
         results=None,
         query="",
         drive="all",
-        file_type="all",
+        file_type="relevant",
         sort_by="relevance",
         mode="all",
         drives=drives,
@@ -84,7 +84,7 @@ def search():
 
     file_type = request.args.get(
         "file_type",
-        "all"
+        "relevant"
     )
 
     sort_by = request.args.get(
@@ -148,7 +148,7 @@ def suggestions():
 
     file_type = request.args.get(
         "file_type",
-        "all"
+        "relevant"
     )
 
 
@@ -430,7 +430,7 @@ def openfile():
 
     file_type = request.args.get(
         "file_type",
-        "all"
+        "relevant"
     )
 
     sort_by = request.args.get(
@@ -553,7 +553,7 @@ def open_folder():
 
     file_type = request.args.get(
         "file_type",
-        "all"
+        "relevant"
     )
 
     sort_by = request.args.get(

@@ -23,6 +23,8 @@ from database.db import (
     CONTENT_EXTENSIONS
 )
 from scanner.scan import scan_folder
+from scanner.scan import is_ignored_path
+from database.db import detect_query_intent, apply_type_filter
 
 TEST_DIR = r"d:\Atlas\test_corpus"
 
@@ -226,6 +228,108 @@ record_test(
     "Finds 'CyberSecurityEncryptionAlgorithm' in os_notes.txt",
     f"Matches: {[r[0] for r in res_mod_search]}",
     has_reindexed
+)
+
+# ----------------------------------------------------------------
+# New Task Verification: Intent, Relevant Filter, and Ignored Paths
+# ----------------------------------------------------------------
+pdf_intent = detect_query_intent("pdf containing Python")
+ppt_intent = detect_query_intent("ppt about networking")
+nl_pdf_intent = detect_query_intent("pdf notes of python saved in june")
+nl_month_intent = detect_query_intent("presentation about machine learning created last month")
+
+record_test(
+    "PDF query intent",
+    "Detects explicit .pdf constraint",
+    str(sorted(pdf_intent["extensions"])),
+    ".pdf" in pdf_intent["extensions"]
+)
+record_test(
+    "PPT query intent",
+    "Detects .ppt and .pptx constraints",
+    str(sorted(ppt_intent["extensions"])),
+    {".ppt", ".pptx"} == ppt_intent["extensions"]
+)
+
+pdf_ranked = search_files("pdf containing Python", file_type="relevant", search_mode="all")
+pdf_first = pdf_ranked and pdf_ranked[0][1].lower().endswith(".pdf")
+record_test(
+    "PDF explicit-query ranking",
+    "Relevant PDF result is ranked first for 'pdf containing Python'",
+    f"Top={pdf_ranked[0][1] if pdf_ranked else 'None'}",
+    pdf_first
+)
+
+ppt_ranked = search_files("ppt about networking", file_type="relevant", search_mode="all")
+ppt_first = ppt_ranked and os.path.splitext(ppt_ranked[0][1])[1].lower() in {".ppt", ".pptx"}
+record_test(
+    "PPT explicit-query ranking",
+    "Presentation result is ranked first for 'ppt about networking'",
+    f"Top={ppt_ranked[0][1] if ppt_ranked else 'None'}",
+    ppt_first
+)
+record_test(
+    "NLP PDF + June intent",
+    "Detects PDF type and June date metadata constraint",
+    f"type={sorted(nl_pdf_intent['extensions'])}, date={nl_pdf_intent['date_start'] is not None}",
+    ".pdf" in nl_pdf_intent["extensions"] and nl_pdf_intent["date_start"] is not None
+)
+record_test(
+    "NLP relative month intent",
+    "Detects presentation type and last-month date metadata constraint",
+    f"type={sorted(nl_month_intent['extensions'])}, date={nl_month_intent['date_start'] is not None}",
+    {".ppt", ".pptx"} == nl_month_intent["extensions"] and nl_month_intent["date_start"] is not None
+)
+
+relevant = apply_type_filter("relevant")
+record_test(
+    "Relevant filter extensions",
+    "Includes common human document formats",
+    str(sorted(relevant)),
+    {".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".md", ".csv"} <= relevant
+)
+
+res_relevant = search_files("", file_type="relevant")
+only_relevant = len(res_relevant) > 0 and all(
+    os.path.splitext(r[1])[1].lower() in relevant for r in res_relevant
+)
+record_test(
+    "Relevant filter search",
+    "Returns only common document formats",
+    f"Count={len(res_relevant)}, first={[r[1] for r in res_relevant[:3]]}",
+    only_relevant
+)
+
+res_all = search_files("", file_type="all")
+record_test(
+    "All Files filter",
+    "Returns broader results than Relevant",
+    f"All={len(res_all)}, Relevant={len(res_relevant)}",
+    len(res_all) >= len(res_relevant)
+)
+
+record_test(
+    "Ignored venv path",
+    "venv is excluded by path detection",
+    r"D:\Atlas\venv\sample.py",
+    is_ignored_path(r"D:\Atlas\venv\sample.py")
+)
+record_test(
+    "Ignored mysys64 path",
+    "mysys64 is excluded by path detection",
+    r"D:\Atlas\mysys64\sample.exe",
+    is_ignored_path(r"D:\Atlas\mysys64\sample.exe")
+)
+
+res_ignored = search_files("", file_type="all")
+no_ignored_results = not any(
+    is_ignored_path(r[1]) for r in res_ignored
+)
+record_test(
+    "Database ignored-path filtering",
+    "Search never returns venv or mysys64 records",
+    f"Returned {len(res_ignored)} rows without ignored paths",
+    no_ignored_results
 )
 
 # ----------------------------------------------------------------

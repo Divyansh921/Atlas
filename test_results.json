@@ -14,7 +14,7 @@
   {
     "name": "TXT content extraction (.txt)",
     "expected": "Contains 'Process Scheduling'",
-    "actual": "Found keyword (len=89)",
+    "actual": "Found keyword (len=145)",
     "status": "PASS"
   },
   {
@@ -74,49 +74,49 @@
   {
     "name": "Layer 1: Filename search ('os_notes')",
     "expected": "Finds os_notes.txt",
-    "actual": "Matches: ['os_notes.txt']",
+    "actual": "Matches: ['os_notes.txt', 'os_notes.txt', 'ClientOSub_eula.txt']",
     "status": "PASS"
   },
   {
     "name": "Layer 2: TXT Content Search ('Semaphore Mutex')",
     "expected": "Matches os_notes.txt with match_type in ('content', 'both')",
-    "actual": "Matches: ['queue.py', 'queue.py'], match_type=content",
+    "actual": "Matches: ['messages_to_error_log.txt', 'os_notes.txt'], match_type=content",
     "status": "PASS"
   },
   {
     "name": "Layer 2: MD Content Search ('Boyce Codd BCNF')",
     "expected": "Matches database_guide.md with match_type in ('content', 'both')",
-    "actual": "Matches: ['database_guide.md'], match_type=content",
+    "actual": "Matches: ['database_guide.md', 'database_guide.md'], match_type=content",
     "status": "PASS"
   },
   {
     "name": "Layer 2: CSV Content Search ('Wireless Quantum Sensor')",
     "expected": "Matches inventory_records.csv with match_type in ('content', 'both')",
-    "actual": "Matches: ['inventory_records.csv'], match_type=content",
+    "actual": "Matches: ['inventory_records.csv', 'inventory_records.csv'], match_type=content",
     "status": "PASS"
   },
   {
     "name": "Layer 2: DOCX Content Search ('mitigation strategies')",
     "expected": "Matches ai_ethics_framework.docx with match_type in ('content', 'both')",
-    "actual": "Matches: ['pdf-ppt.pptx', 'Deep Learning (2).pdf'], match_type=content",
+    "actual": "Matches: ['pdf-ppt.pptx', 'pdf-ppt_part5.pptx'], match_type=content",
     "status": "PASS"
   },
   {
     "name": "Layer 2: PPTX Content Search ('Transmission Control Protocol')",
     "expected": "Matches networking_lecture.pptx with match_type in ('content', 'both')",
-    "actual": "Matches: ['SSL.py', 'SSL.py'], match_type=content",
+    "actual": "Matches: ['lpklegal.txt', 'messages_to_error_log.txt'], match_type=content",
     "status": "PASS"
   },
   {
     "name": "Layer 2: XLSX Content Search ('Enterprise Cloud Infrastructure')",
     "expected": "Matches quarterly_budget_analysis.xlsx with match_type in ('content', 'both')",
-    "actual": "Matches: ['app.py', 'app.py'], match_type=content",
+    "actual": "Matches: ['Unit 3.pdf', 'EXAM_FORGE_ENHANCED_v2.pptx'], match_type=content",
     "status": "PASS"
   },
   {
     "name": "Layer 2: PDF Content Search ('Consensus Protocols Paxos')",
     "expected": "Matches distributed_systems.pdf with match_type in ('content', 'both')",
-    "actual": "Matches: ['distributed_systems.pdf'], match_type=content",
+    "actual": "Matches: ['distributed_systems.pdf', 'distributed_systems.pdf'], match_type=content",
     "status": "PASS"
   },
   {
@@ -128,13 +128,13 @@
   {
     "name": "Extension filter (file_type='.xlsx')",
     "expected": "Only returns .xlsx files",
-    "actual": "Count: 3",
+    "actual": "Count: 4",
     "status": "PASS"
   },
   {
     "name": "Sorting functionality (sort_by='name_asc')",
     "expected": "Executes without error",
-    "actual": "Returned 534 results",
+    "actual": "Returned 1313 results",
     "status": "PASS"
   },
   {
@@ -146,13 +146,85 @@
   {
     "name": "Re-indexed modified file content search",
     "expected": "Finds 'CyberSecurityEncryptionAlgorithm' in os_notes.txt",
-    "actual": "Matches: ['os_notes.txt']",
+    "actual": "Matches: ['os_notes.txt', 'os_notes.txt']",
+    "status": "PASS"
+  },
+  {
+    "name": "PDF query intent",
+    "expected": "Detects explicit .pdf constraint",
+    "actual": "['.pdf']",
+    "status": "PASS"
+  },
+  {
+    "name": "PPT query intent",
+    "expected": "Detects .ppt and .pptx constraints",
+    "actual": "['.ppt', '.pptx']",
+    "status": "PASS"
+  },
+  {
+    "name": "PDF explicit-query ranking",
+    "expected": "Relevant PDF result is ranked first for 'pdf containing Python'",
+    "actual": "Top=C:\\Users\\Divyansh Kumar\\Desktop\\CLG\\The Ultimate Python Handbook.pdf",
+    "status": "PASS"
+  },
+  {
+    "name": "PPT explicit-query ranking",
+    "expected": "Presentation result is ranked first for 'ppt about networking'",
+    "actual": "Top=d:\\Atlas\\test_corpus\\networking_lecture.pptx",
+    "status": "PASS"
+  },
+  {
+    "name": "NLP PDF + June intent",
+    "expected": "Detects PDF type and June date metadata constraint",
+    "actual": "type=['.pdf'], date=True",
+    "status": "PASS"
+  },
+  {
+    "name": "NLP relative month intent",
+    "expected": "Detects presentation type and last-month date metadata constraint",
+    "actual": "type=['.ppt', '.pptx'], date=True",
+    "status": "PASS"
+  },
+  {
+    "name": "Relevant filter extensions",
+    "expected": "Includes common human document formats",
+    "actual": "['.csv', '.doc', '.docx', '.md', '.pdf', '.ppt', '.pptx', '.txt', '.xls', '.xlsx']",
+    "status": "PASS"
+  },
+  {
+    "name": "Relevant filter search",
+    "expected": "Returns only common document formats",
+    "actual": "Count=1313, first=['D:\\\\AtlasTest\\\\1st.txt', 'D:\\\\AtlasTest\\\\2ndtest.txt', 'D:\\\\$RECYCLE.BIN\\\\S-1-5-21-1809960879-3372274502-2057582171-1002\\\\$I0M88UN.PDF']",
+    "status": "PASS"
+  },
+  {
+    "name": "All Files filter",
+    "expected": "Returns broader results than Relevant",
+    "actual": "All=75313, Relevant=1313",
+    "status": "PASS"
+  },
+  {
+    "name": "Ignored venv path",
+    "expected": "venv is excluded by path detection",
+    "actual": "D:\\Atlas\\venv\\sample.py",
+    "status": "PASS"
+  },
+  {
+    "name": "Ignored mysys64 path",
+    "expected": "mysys64 is excluded by path detection",
+    "actual": "D:\\Atlas\\mysys64\\sample.exe",
+    "status": "PASS"
+  },
+  {
+    "name": "Database ignored-path filtering",
+    "expected": "Search never returns venv or mysys64 records",
+    "actual": "Returned 75313 rows without ignored paths",
     "status": "PASS"
   },
   {
     "name": "Embedding generation for documents",
     "expected": "Embeddings stored >= 6",
-    "actual": "Stored: 7",
+    "actual": "Stored: 1958",
     "status": "PASS"
   },
   {

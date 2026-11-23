@@ -157,6 +157,7 @@
                     <label for="file_type">Type</label>
                     <div class="select-wrap">
                         <select name="file_type" id="file_type" onchange="this.form.submit()">
+                            <option value="relevant" {% if file_type == "relevant" %}selected{% endif %}>Relevant</option>
                             <option value="all" {% if file_type == "all" %}selected{% endif %}>All Types</option>
 
                             <option value=".pdf" {% if file_type == ".pdf" %}selected{% endif %}>PDF</option>

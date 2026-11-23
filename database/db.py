@@ -5,6 +5,8 @@ import re
 import csv
 import logging
 import threading
+from datetime import datetime, timedelta
+from scanner.scan import is_ignored_path
 
 
 # ============================================================
@@ -33,6 +35,111 @@ CONTENT_EXTENSIONS = {
     ".pptx",
     ".xlsx",
 }
+
+RELEVANT_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".ppt", ".pptx",
+    ".xls", ".xlsx", ".txt", ".md", ".csv"
+}
+
+TYPE_ALIASES = {
+    "pdf": {".pdf"},
+    "word": {".doc", ".docx"},
+    "document": {".doc", ".docx"},
+    "doc": {".doc", ".docx"},
+    "docx": {".docx"},
+    "presentation": {".ppt", ".pptx"},
+    "powerpoint": {".ppt", ".pptx"},
+    "slide": {".ppt", ".pptx"},
+    "slides": {".ppt", ".pptx"},
+    "ppt": {".ppt", ".pptx"},
+    "pptx": {".pptx"},
+    "spreadsheet": {".xls", ".xlsx"},
+    "excel": {".xls", ".xlsx"},
+    "xls": {".xls", ".xlsx"},
+    "xlsx": {".xlsx"},
+    "text": {".txt"},
+    "txt": {".txt"},
+    "markdown": {".md"},
+    "md": {".md"},
+    "csv": {".csv"},
+}
+
+
+def detect_query_intent(query):
+    """Extract explicit file types and relative modification-date constraints."""
+    text = " ".join((query or "").lower().replace("-", " ").replace("_", " ").split())
+    extensions = set()
+
+    for alias, alias_extensions in TYPE_ALIASES.items():
+        pattern = r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])"
+        if re.search(pattern, text):
+            extensions.update(alias_extensions)
+
+    now = datetime.now()
+    start = None
+    end = None
+
+    if re.search(r"\b(today|this day)\b", text):
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = now
+    elif re.search(r"\byesterday\b", text):
+        start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif re.search(r"\blast\s+(week|7\s+days)\b", text):
+        start = now - timedelta(days=7)
+        end = now
+    elif re.search(r"\bthis\s+week\b", text):
+        start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        end = now
+    elif re.search(r"\blast\s+month\b", text):
+        first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if first_this_month.month == 1:
+            start = first_this_month.replace(year=first_this_month.year - 1, month=12)
+        else:
+            start = first_this_month.replace(month=first_this_month.month - 1)
+        end = first_this_month
+    elif re.search(r"\bthis\s+month\b", text):
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = now
+    else:
+        month_names = [
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november", "december"
+        ]
+        month_match = re.search(
+            r"\b(january|february|march|april|may|june|july|"
+            r"august|september|october|november|december)\b",
+            text
+        )
+        if month_match:
+            month = month_names.index(month_match.group(1)) + 1
+            year_match = re.search(r"\b(20\d{2})\b", text)
+            year = int(year_match.group(1)) if year_match else now.year
+            start = datetime(year, month, 1)
+            if month == 12:
+                end = datetime(year + 1, 1, 1)
+            else:
+                end = datetime(year, month + 1, 1)
+
+    return {
+        "extensions": extensions,
+        "date_start": start.timestamp() if start else None,
+        "date_end": end.timestamp() if end else None,
+    }
+
+
+def apply_type_filter(file_type, query_extensions=None):
+    """Resolve one exact extension or the grouped Relevant filter."""
+    if file_type and file_type.lower() != "all":
+        normalized = file_type.lower()
+        if normalized == "relevant":
+            return set(query_extensions or RELEVANT_EXTENSIONS)
+        if not normalized.startswith("."):
+            normalized = "." + normalized
+        return {normalized}
+    if query_extensions:
+        return set(query_extensions)
+    return set()
 
 
 # ============================================================
@@ -916,6 +1023,18 @@ def quick_scan_location(location_id):
     try:
 
         for root, dirs, filenames in os.walk(folder_path):
+            dirs[:] = [
+                directory for directory in dirs
+                if directory.lower() not in {
+                    name.lower() for name in [
+                        "venv", ".venv", "env", ".env", ".git", "__pycache__",
+                        "node_modules", ".vscode", ".idea", "build", "dist",
+                        ".pytest_cache", ".mypy_cache", "msys64", "mysys64",
+                        "cache", "caches", ".cache", "tmp", "temp", ".tmp",
+                        ".temp", "appdata", "programdata"
+                    ]
+                }
+            ]
 
             for filename in filenames:
 
@@ -979,6 +1098,16 @@ def quick_scan_location(location_id):
     database_map = {}
 
     for file_id, file_path, size, last_modified in database_files:
+        if is_ignored_path(file_path):
+            cursor.execute(
+                "DELETE FROM files WHERE id = ?",
+                (file_id,)
+            )
+            cursor.execute(
+                "DELETE FROM files WHERE id = ?",
+                (file_id,)
+            )
+            continue
 
         database_map[
             os.path.normcase(
@@ -1158,7 +1287,7 @@ def search_files(
     query,
     drive=None,
     sort_by="relevance",
-    file_type="all",
+    file_type="relevant",
     search_mode="all"
 ):
 
@@ -1166,8 +1295,23 @@ def search_files(
     cursor = connection.cursor()
 
     query = query or ""
+    intent = detect_query_intent(query)
 
-    search_terms = query.split()
+    stop_words = {
+        "a", "an", "the", "of", "with", "for", "that", "contains",
+        "containing", "about", "notes", "note", "presentation",
+        "document", "file", "files", "saved", "created", "modified",
+        "in", "on", "last", "month", "week", "today", "yesterday",
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november",
+        "december", "pdf", "doc", "docx", "ppt", "pptx", "xls",
+        "xlsx", "txt", "md", "csv", "word", "excel", "powerpoint",
+        "spreadsheet", "text", "markdown"
+    }
+    search_terms = [
+        term for term in re.findall(r"[A-Za-z0-9]+", query)
+        if term.lower() not in stop_words
+    ]
 
     # ========================================================
     # NORMALIZATION
@@ -1413,35 +1557,35 @@ def search_files(
     # ========================================================
 
     if file_type and file_type != "all":
+        selected_extensions = apply_type_filter(file_type, intent["extensions"])
+        if selected_extensions:
+            placeholders = ",".join("?" for _ in selected_extensions)
+            sql += " AND " if ("WHERE" in sql.upper()) else " WHERE "
+            sql += f"LOWER(extension) IN ({placeholders})"
+            parameters.extend(sorted(selected_extensions))
+    elif intent["extensions"]:
+        placeholders = ",".join("?" for _ in intent["extensions"])
+        sql += " AND " if ("WHERE" in sql.upper()) else " WHERE "
+        sql += f"LOWER(extension) IN ({placeholders})"
+        parameters.extend(sorted(intent["extensions"]))
 
-        if search_terms or (
-            drive and drive != "all"
-        ):
+    if intent["date_start"] is not None:
+        sql += " AND " if ("WHERE" in sql.upper()) else " WHERE "
+        sql += "last_modified >= ? AND last_modified < ?"
+        parameters.extend([intent["date_start"], intent["date_end"]])
 
-            sql += """
-                AND LOWER(extension) = ?
-            """
-
-        else:
-
-            sql += """
-                WHERE LOWER(extension) = ?
-            """
-
-        # Make sure the extension always has a dot.
-        #
-        # pdf  -> .pdf
-        # .pdf -> .pdf
-
-        selected_extension = file_type.lower()
-
-        if not selected_extension.startswith("."):
-
-            selected_extension = "." + selected_extension
-
-        parameters.append(
-            selected_extension
-        )
+    ignored_patterns = [
+        "%\\venv\\%", "%\\ .venv\\%", "%\\env\\%", "%\\.env\\%",
+        "%\\mysys64\\%", "%\\msys64\\%", "%\\node_modules\\%",
+        "%\\__pycache__\\%", "%\\.git\\%", "%\\appdata\\%",
+        "%\\programdata\\%", "%\\cache\\%", "%\\caches\\%",
+        "%\\temp\\%", "%\\tmp\\%"
+    ]
+    ignored_patterns = [pattern.replace("\\ .venv\\", "\\.venv\\") for pattern in ignored_patterns]
+    for pattern in ignored_patterns:
+        sql += " AND " if ("WHERE" in sql.upper()) else " WHERE "
+        sql += "UPPER(file_path) NOT LIKE UPPER(?)"
+        parameters.append(pattern)
 
     # ========================================================
     # SORTING
@@ -1503,7 +1647,10 @@ def search_files(
         parameters
     )
 
-    results = cursor.fetchall()
+    results = [
+        row for row in cursor.fetchall()
+        if not is_ignored_path(row[1])
+    ]
 
     connection.close()
 
@@ -1735,6 +1882,21 @@ def search_files(
             )
 
             score = 0
+
+            # Explicit file-type intent from everyday-language queries.
+            if intent["extensions"]:
+                if extension in intent["extensions"]:
+                    score += 1400
+                else:
+                    score -= 900
+
+            # Metadata date constraints.
+            if (
+                intent["date_start"] is not None
+                and intent["date_end"] is not None
+                and intent["date_start"] <= file[3] < intent["date_end"]
+            ):
+                score += 600
 
             # =================================================
             # 1. EXACT COMPLETE FILENAME
@@ -2074,7 +2236,7 @@ def search_files(
 def get_search_suggestions(
     query,
     drive="all",
-    file_type="all"
+    file_type="relevant"
 ):
 
     connection = sqlite3.connect("atlas.db")
@@ -2128,20 +2290,11 @@ def get_search_suggestions(
     # --------------------------------------------------------
 
     if file_type and file_type != "all":
-
-        selected_extension = file_type.lower()
-
-        if not selected_extension.startswith("."):
-
-            selected_extension = "." + selected_extension
-
-        sql += """
-            AND LOWER(extension) = ?
-        """
-
-        parameters.append(
-            selected_extension
-        )
+        selected_extensions = apply_type_filter(file_type)
+        if selected_extensions:
+            placeholders = ",".join("?" for _ in selected_extensions)
+            sql += f" AND LOWER(extension) IN ({placeholders})"
+            parameters.extend(sorted(selected_extensions))
 
 
     # --------------------------------------------------------
@@ -2317,7 +2470,7 @@ def generate_embedding(text):
 def natural_language_search(
     query,
     drive=None,
-    file_type="all",
+    file_type="relevant",
     top_k=50
 ):
     """
@@ -2342,8 +2495,28 @@ def natural_language_search(
 
         return []
 
+    intent = detect_query_intent(query)
+
+    # Embed only semantic topic words. File type and date constraints are
+    # handled deterministically from metadata.
+    topic_terms = [
+        term for term in re.findall(r"[A-Za-z0-9]+", query)
+        if term.lower() not in {
+            "a", "an", "the", "of", "with", "for", "that", "contains",
+            "containing", "about", "notes", "note", "presentation",
+            "document", "file", "files", "saved", "created", "modified",
+            "in", "on", "last", "month", "week", "today", "yesterday",
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november",
+            "december", "pdf", "doc", "docx", "ppt", "pptx", "xls",
+            "xlsx", "txt", "md", "csv", "word", "excel", "powerpoint",
+            "spreadsheet", "text", "markdown"
+        }
+    ]
+    topic_query = " ".join(topic_terms) or query
+
     # Generate query embedding
-    query_embedding = generate_embedding(query)
+    query_embedding = generate_embedding(topic_query)
 
     if query_embedding is None:
 
@@ -2364,16 +2537,15 @@ def natural_language_search(
         filter_sql += " AND UPPER(f.file_path) LIKE ?"
         filter_params.append(f"{drive.upper()}%")
 
-    if file_type and file_type != "all":
+    selected_extensions = apply_type_filter(file_type, intent["extensions"])
+    if selected_extensions:
+        placeholders = ",".join("?" for _ in selected_extensions)
+        filter_sql += f" AND LOWER(f.extension) IN ({placeholders})"
+        filter_params.extend(sorted(selected_extensions))
 
-        ext = file_type.lower()
-
-        if not ext.startswith("."):
-
-            ext = "." + ext
-
-        filter_sql += " AND LOWER(f.extension) = ?"
-        filter_params.append(ext)
+    if intent["date_start"] is not None:
+        filter_sql += " AND f.last_modified >= ? AND f.last_modified < ?"
+        filter_params.extend([intent["date_start"], intent["date_end"]])
 
     # --------------------------------------------------------
     # Retrieve all embeddings
@@ -2392,7 +2564,10 @@ def natural_language_search(
         WHERE 1=1 {filter_sql}
     """, filter_params)
 
-    rows = cursor.fetchall()
+    rows = [
+        row for row in cursor.fetchall()
+        if not is_ignored_path(row[3])
+    ]
 
     connection.close()
 
@@ -2437,6 +2612,22 @@ def natural_language_search(
             similarity = dot_product / (
                 norm_q * norm_f
             )
+
+            if (
+                intent["date_start"] is not None
+                and intent["date_end"] is not None
+            ):
+                if intent["date_start"] <= last_modified < intent["date_end"]:
+                    similarity += 0.08
+                else:
+                    similarity -= 0.05
+
+            extension = os.path.splitext(file_name)[1].lower()
+            if intent["extensions"]:
+                if extension in intent["extensions"]:
+                    similarity += 0.12
+                else:
+                    similarity -= 0.12
 
             # Only include results above threshold
             if similarity > 0.25:
