@@ -11,17 +11,23 @@
 <div class="app-shell">
 
     <header class="header">
-        <a class="brand" href="{{ url_for('search') }}" aria-label="Atlas home">
-            <span class="brand-mark">A</span>
+        <a class="brand" href="{{ url_for('home') }}" aria-label="Atlas home">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 4 5 20"></path>
+                    <path d="M12 4l7 16"></path>
+                    <path d="M7.5 14.5h9"></path>
+                </svg>
+            </span>
             <span class="brand-copy">
                 <span class="brand-name">Atlas</span>
                 <span class="brand-tagline">Personal File Search Engine</span>
             </span>
         </a>
 
-        <div class="header-status">
+        <div class="header-status" id="header-status" aria-live="polite">
             <span class="status-dot" aria-hidden="true"></span>
-            <span>Local index</span>
+            <span id="index-status-text">Local index</span>
         </div>
     </header>
 
@@ -29,9 +35,23 @@
         {% if messages %}
             <div class="flash-messages" aria-live="polite">
                 {% for message in messages %}
-                    <div class="flash-message">
-                        <span class="flash-icon" aria-hidden="true">!</span>
-                        <span>{{ message }}</span>
+                    {% set lower_msg = message|lower %}
+                    {% if 'no longer exists' in lower_msg or 'could not' in lower_msg or 'no file' in lower_msg %}
+                        {% set flash_kind = 'error' %}
+                        {% set flash_label = 'Error' %}
+                    {% elif 'no indexed' in lower_msg %}
+                        {% set flash_kind = 'warning' %}
+                        {% set flash_label = 'Notice' %}
+                    {% else %}
+                        {% set flash_kind = 'success' %}
+                        {% set flash_label = 'Status' %}
+                    {% endif %}
+                    <div class="flash-message flash-message--{{ flash_kind }}" role="status">
+                        <div class="flash-message-body">
+                            <span class="flash-badge">{{ flash_label }}</span>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button type="button" class="flash-dismiss" aria-label="Dismiss message">&times;</button>
                     </div>
                 {% endfor %}
             </div>
@@ -42,11 +62,8 @@
 
         <section class="search-section panel">
             <div class="section-heading">
-                <div>
-                    <span class="eyebrow">SEARCH</span>
-                    <h1>Find anything, fast.</h1>
-                    <p>Search the files Atlas has indexed on your drives.</p>
-                </div>
+                <h1>Search local files</h1>
+                <p>Search by filename, document content, or natural language across indexed drives.</p>
             </div>
 
             <form
@@ -56,7 +73,7 @@
             >
                 <div class="search-box">
                     <span class="search-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="6.5"></circle>
                             <path d="m16 16 4.5 4.5"></path>
                         </svg>
@@ -66,7 +83,7 @@
                         type="text"
                         name="query"
                         id="search-input"
-                        placeholder="Search for files..."
+                        placeholder="Search by filename, phrase, or question..."
                         value="{{ query }}"
                         autocomplete="off"
                         required
@@ -88,13 +105,7 @@
                 <input type="hidden" name="sort" value="{{ sort_by }}">
                 <input type="hidden" name="mode" value="{{ mode }}">
 
-                <button type="submit" class="primary-button">
-                    <span>Search</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M5 12h13"></path>
-                        <path d="m13 6 6 6-6 6"></path>
-                    </svg>
-                </button>
+                <button type="submit" class="primary-button">Search</button>
             </form>
 
             <div class="filters" aria-label="Search filters">
@@ -238,21 +249,12 @@
         </section>
 
         <section class="scan-section panel">
-            <div class="scan-copy">
-                <div class="scan-title-row">
-                    <span class="scan-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h3l1.5 2h6.5A2.5 2.5 0 0 1 20 9.5v7A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"></path>
-                            <path d="M8 13h8"></path>
-                            <path d="M12 9v8"></path>
-                        </svg>
-                    </span>
-                    <div>
-                        <span class="eyebrow">INDEX FILES</span>
-                        <h2>Keep Atlas up to date.</h2>
-                    </div>
+            <div class="scan-header">
+                <div class="scan-copy">
+                    <h2>Index Files</h2>
+                    <p>Scan a folder to add files, or update content and semantic indexes.</p>
                 </div>
-                <p>Scan a folder to add its files to the index, or run a quick scan for recent changes.</p>
+                <div class="indexing-progress-note" id="indexing-progress-note" aria-live="polite"></div>
             </div>
 
             <div class="scan-actions">
@@ -265,6 +267,7 @@
                     <input
                         type="text"
                         name="folder"
+                        aria-label="Folder path to scan"
                         placeholder="Enter folder path (e.g. D:\Downloads)"
                         required
                     >
@@ -274,13 +277,14 @@
                     </button>
                 </form>
 
+                <span class="scan-divider" aria-hidden="true"></span>
+
                 <form
                     class="quick-scan-form"
                     action="{{ url_for('quick_scan') }}"
                     method="get"
                 >
                     <button type="submit" class="ghost-button quick-scan-button" title="Check indexed locations for added, modified, or deleted files">
-                        <span aria-hidden="true">↻</span>
                         Quick Scan
                     </button>
                 </form>
@@ -291,7 +295,6 @@
                     method="get"
                 >
                     <button type="submit" class="ghost-button quick-scan-button" title="Extract and index text inside PDF, DOCX, DOC, TXT, MD, CSV, PPTX, XLSX">
-                        <span aria-hidden="true">📄</span>
                         Index Content
                     </button>
                 </form>
@@ -302,7 +305,6 @@
                     method="get"
                 >
                     <button type="submit" class="ghost-button quick-scan-button" title="Build local semantic vector index for Natural Language Search">
-                        <span aria-hidden="true">🧠</span>
                         AI Index
                     </button>
                 </form>
@@ -315,10 +317,7 @@
             {% if results %}
 
                 <div class="results-header">
-                    <div>
-                        <span class="eyebrow">RESULTS</span>
-                        <h2>Search results</h2>
-                    </div>
+                    <h2>Search results</h2>
 
                     <div class="results-count" aria-label="Result count">
                         <strong>{{ results|length }}</strong>
@@ -330,11 +329,12 @@
                     <div class="results">
 
                         {% for file in results %}
+                            {% set ext = file[0].rsplit('.', 1)[1]|upper if '.' in file[0] else 'FILE' %}
 
                             <article class="result-card">
 
-                                <div class="file-type" aria-hidden="true">
-                                    <span>FILE</span>
+                                <div class="file-type" aria-hidden="true" title="{{ ext }}">
+                                    {{ ext }}
                                 </div>
 
                                 <div class="file-content">
@@ -347,33 +347,30 @@
                                     </p>
 
                                     <div class="file-meta">
-                                        <span class="meta-pill">
+                                        <span class="meta-item">
                                             <span class="meta-label">Size</span>
                                             <span class="meta-value">{{ file[3] }}</span>
                                         </span>
-                                        <span class="meta-pill">
+                                        <span class="meta-separator" aria-hidden="true">&middot;</span>
+                                        <span class="meta-item">
                                             <span class="meta-label">Modified</span>
                                             <span class="meta-value">{{ file[2] }}</span>
                                         </span>
                                         {% if file|length > 4 and file[4] %}
                                             {% if file[4] == 'both' %}
-                                                <span class="meta-pill match-pill match-both" title="Matched both filename and document content">
-                                                    <span class="meta-label">Match</span>
+                                                <span class="match-pill match-both" title="Matched both filename and document content">
                                                     <span class="meta-value">Name + Content</span>
                                                 </span>
                                             {% elif file[4] == 'content' %}
-                                                <span class="meta-pill match-pill match-content" title="Matched inside document content">
-                                                    <span class="meta-label">Match</span>
+                                                <span class="match-pill match-content" title="Matched inside document content">
                                                     <span class="meta-value">Content</span>
                                                 </span>
                                             {% elif file[4] == 'semantic' %}
-                                                <span class="meta-pill match-pill match-semantic" title="Matched via natural language semantic search">
-                                                    <span class="meta-label">Match</span>
+                                                <span class="match-pill match-semantic" title="Matched via natural language semantic search">
                                                     <span class="meta-value">Natural Language</span>
                                                 </span>
                                             {% elif file[4] == 'filename' %}
-                                                <span class="meta-pill match-pill match-filename" title="Matched filename">
-                                                    <span class="meta-label">Match</span>
+                                                <span class="match-pill match-filename" title="Matched filename">
                                                     <span class="meta-value">Filename</span>
                                                 </span>
                                             {% endif %}
@@ -394,7 +391,7 @@
                                         <input type="hidden" name="sort" value="{{ sort_by }}">
                                         <input type="hidden" name="mode" value="{{ mode }}">
 
-                                        <button type="submit" class="open-button primary-button">
+                                        <button type="submit" class="open-button secondary-button">
                                             Open File
                                         </button>
                                     </form>
@@ -427,26 +424,16 @@
             {% elif query %}
 
                 <div class="no-results empty-state">
-                    <div class="empty-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <circle cx="11" cy="11" r="7"></circle>
-                            <path d="m20 20-4-4"></path>
-                            <path d="M8.5 8.5 13.5 13.5"></path>
-                            <path d="m13.5 8.5-5 5"></path>
-                        </svg>
-                    </div>
-                    <h2>No files found</h2>
-                    <p>Atlas couldn't find any files matching <strong>"{{ query }}"</strong>.</p>
-                    <span class="empty-hint">Try a broader search term or change the filters.</span>
+                    <h2>No matching files</h2>
+                    <p>No indexed files matched <strong>"{{ query }}"</strong> with the current filters.</p>
+                    <span class="empty-hint">Try a broader search term, switch search mode, or set Type to All Types.</span>
                 </div>
 
             {% else %}
 
                 <div class="empty-state welcome-state">
-                    <div class="welcome-mark" aria-hidden="true">A</div>
-                    <span class="eyebrow">READY</span>
-                    <h2>Your files are waiting.</h2>
-                    <p>Search the index above to find a file, or scan a folder to add more.</p>
+                    <h2>Ready to search</h2>
+                    <p>Enter a filename, document phrase, or natural language query above, or scan a folder to add files to the index.</p>
                 </div>
 
             {% endif %}
@@ -457,7 +444,7 @@
 
     <footer class="footer">
         <span>Atlas</span>
-        <span>Local • Private • Fast</span>
+        <span>Local file search</span>
     </footer>
 
 </div>
