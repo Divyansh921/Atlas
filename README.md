@@ -215,7 +215,3 @@ ATLAS improves it with:
 - Relevant-file filtering
 
 A larger model or external API is not required for the current implementation.
-
-## License
-
-License information has not been added to this repository.
