@@ -1,2 +1,0 @@
-Operating System Process Scheduling, Semaphore, Mutex and Deadlock Prevention Algorithms.
-Appended extra keyword: CyberSecurityEncryptionAlgorithm

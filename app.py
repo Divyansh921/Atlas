@@ -1,7 +1,10 @@
 import os
+import sys
+import socket
 import subprocess
 import threading
 import logging
+import webbrowser
 
 from flask import (
     Flask,
@@ -32,8 +35,19 @@ from scanner.scan import scan_folder
 
 logger = logging.getLogger("atlas")
 
-app = Flask(__name__)
-app.secret_key = "secret_key"
+
+def get_resource_path(relative_path):
+    """Resolve asset paths for both dev mode and PyInstaller frozen builds."""
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
+app = Flask(
+    __name__,
+    template_folder=get_resource_path("templates"),
+    static_folder=get_resource_path("static")
+)
+app.secret_key = os.environ.get("ATLAS_SECRET_KEY", "atlas-local-desktop-key")
 
 
 # ============================================================
@@ -661,8 +675,26 @@ def open_folder():
 # RUN APPLICATION
 # ============================================================
 
-if __name__ == "__main__":
+def find_available_port(preferred_port=5000):
+    """Return preferred_port if free on 127.0.0.1, otherwise an available local port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        if sock.connect_ex(("127.0.0.1", preferred_port)) != 0:
+            return preferred_port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
+
+def open_browser(port):
+    webbrowser.open_new(f"http://127.0.0.1:{port}")
+
+
+if __name__ == "__main__":
+    port = find_available_port(5000)
+    threading.Timer(1.2, open_browser, args=(port,)).start()
     app.run(
-        debug=False
+        host="127.0.0.1",
+        port=port,
+        debug=False,
+        use_reloader=False
     )

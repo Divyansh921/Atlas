@@ -21,6 +21,24 @@ logging.basicConfig(
 logger = logging.getLogger("atlas")
 
 
+def get_app_data_dir():
+    """Return a writable per-user data directory in %LOCALAPPDATA%\\Atlas."""
+    base_dir = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    app_dir = os.path.join(base_dir, "Atlas")
+    os.makedirs(app_dir, exist_ok=True)
+    return app_dir
+
+
+def get_db_path():
+    """Return the full path to the writable SQLite database."""
+    return os.path.join(get_app_data_dir(), "atlas.db")
+
+
+def get_db_connection():
+    """Open a SQLite connection with a safe timeout for background threads."""
+    return sqlite3.connect(get_db_path(), timeout=30.0)
+
+
 # ============================================================
 # CONTENT-EXTRACTABLE EXTENSIONS
 # ============================================================
@@ -228,7 +246,7 @@ def apply_type_filter(file_type, query_extensions=None):
 
 def create_database():
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     # --------------------------------------------------------
@@ -705,7 +723,7 @@ def index_file_content(file_id, file_path, extension):
 
         content = content[:1_000_000]
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     try:
@@ -784,7 +802,7 @@ def index_all_content(progress_callback=None):
     Returns counts of success and failure.
     """
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     # Find files needing content indexing
@@ -868,7 +886,7 @@ def rebuild_fts_index():
     files table data.
     """
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     try:
@@ -910,7 +928,7 @@ def rebuild_fts_index():
 
 def save_files(files, location_id):
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     for file_path in files:
@@ -984,7 +1002,7 @@ def save_files(files, location_id):
 
 def save_indexed_location(path):
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -1044,7 +1062,7 @@ def get_available_drives():
 
 def get_indexed_locations():
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -1069,7 +1087,7 @@ def get_indexed_locations():
 
 def quick_scan_location(location_id):
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     # --------------------------------------------------------
@@ -1179,10 +1197,6 @@ def quick_scan_location(location_id):
 
     for file_id, file_path, size, last_modified in database_files:
         if is_ignored_path(file_path):
-            cursor.execute(
-                "DELETE FROM files WHERE id = ?",
-                (file_id,)
-            )
             cursor.execute(
                 "DELETE FROM files WHERE id = ?",
                 (file_id,)
@@ -1371,7 +1385,7 @@ def search_files(
     search_mode="all"
 ):
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     query = query or ""
@@ -2319,7 +2333,7 @@ def get_search_suggestions(
     file_type="relevant"
 ):
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     query = query.strip()
@@ -2464,6 +2478,7 @@ def get_embedding_model():
 
         try:
 
+            import sys
             from sentence_transformers import (
                 SentenceTransformer
             )
@@ -2473,15 +2488,29 @@ def get_embedding_model():
                 "all-MiniLM-L6-v2..."
             )
 
-            try:
-                _embedding_model = SentenceTransformer(
-                    "all-MiniLM-L6-v2",
-                    local_files_only=True
-                )
-            except Exception:
-                _embedding_model = SentenceTransformer(
-                    "all-MiniLM-L6-v2"
-                )
+            base_path = getattr(
+                sys,
+                "_MEIPASS",
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            )
+            bundled_model = os.path.join(base_path, "models", "all-MiniLM-L6-v2")
+            cache_dir = os.path.join(get_app_data_dir(), "models")
+            os.makedirs(cache_dir, exist_ok=True)
+
+            if os.path.exists(bundled_model):
+                _embedding_model = SentenceTransformer(bundled_model)
+            else:
+                try:
+                    _embedding_model = SentenceTransformer(
+                        "all-MiniLM-L6-v2",
+                        cache_folder=cache_dir,
+                        local_files_only=True
+                    )
+                except Exception:
+                    _embedding_model = SentenceTransformer(
+                        "all-MiniLM-L6-v2",
+                        cache_folder=cache_dir
+                    )
 
             logger.info(
                 "Embedding model loaded successfully."
@@ -2625,7 +2654,7 @@ def natural_language_search(
     else:
         query_unit = None
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     # --------------------------------------------------------
@@ -2955,7 +2984,7 @@ def generate_file_embedding(file_id):
     Generate and store embedding for a single file.
     """
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -3027,7 +3056,7 @@ def generate_all_embeddings(limit=5000, progress_callback=None):
             "error": "Embedding model not available."
         }
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     placeholders = ",".join("?" for _ in CONTENT_EXTENSIONS)
@@ -3137,7 +3166,7 @@ def get_indexing_status():
     Returns a summary of content indexing status.
     """
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     cursor.execute(
@@ -3187,7 +3216,7 @@ def clean_stale_records():
     no longer exist in the files table.
     """
 
-    connection = sqlite3.connect("atlas.db")
+    connection = get_db_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
