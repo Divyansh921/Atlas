@@ -31,12 +31,18 @@ def get_app_data_dir():
 
 def get_db_path():
     """Return the full path to the writable SQLite database."""
+    if os.environ.get("ATLAS_DB_PATH"):
+        return os.environ["ATLAS_DB_PATH"]
     return os.path.join(get_app_data_dir(), "atlas.db")
 
 
 def get_db_connection():
-    """Open a SQLite connection with a safe timeout for background threads."""
-    return sqlite3.connect(get_db_path(), timeout=30.0)
+    """Open a SQLite connection with WAL mode and a safe timeout for background threads."""
+    conn = sqlite3.connect(get_db_path(), timeout=30.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    return conn
+
 
 
 # ============================================================

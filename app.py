@@ -688,6 +688,11 @@ def find_available_port(preferred_port=5000):
 def open_browser(port):
     webbrowser.open_new(f"http://127.0.0.1:{port}")
 
+@app.route("/shutdown", methods=["POST"])
+def shutdown_app():
+    """Gracefully terminate the background server process."""
+    threading.Timer(0.5, lambda: os._exit(0)).start()
+    return {"status": "shutting_down"}
 
 if __name__ == "__main__":
     port = find_available_port(5000)

@@ -29,6 +29,12 @@
             <span class="status-dot" aria-hidden="true"></span>
             <span id="index-status-text">Local index</span>
         </div>
+              <button onclick="quitAtlas()" title="Stop Atlas background server"
+              style="margin-left: 10px; padding: 6px 12px; border-radius: 6px; border: 1px solid #ef4444; background: transparent; color: #ef4444; cursor: pointer;">
+        Quit
+      </button>
+    </header>
+
     </header>
 
     {% with messages = get_flashed_messages() %}
@@ -604,6 +610,17 @@
 
     suggestionsBox.style.display = "none";
 </script>
+  <script>
+  async function quitAtlas() {
+    if (!confirm("Stop Atlas background server?")) return;
+    try {
+      await fetch("/shutdown", { method: "POST" });
+    } catch (e) {}
+    document.body.innerHTML = "<div style='display:flex;height:100vh;align-items:center;justify-content:center;font-family:sans-serif;color:#94a3b8;background:#0f172a;'><h2>Atlas has stopped. You can close this tab.</h2></div>";
+  }
+  </script>
+</body>
+
 
 </body>
 </html>
