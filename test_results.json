@@ -14,7 +14,7 @@
   {
     "name": "TXT content extraction (.txt)",
     "expected": "Contains 'Process Scheduling'",
-    "actual": "Found keyword (len=145)",
+    "actual": "Found keyword (len=146)",
     "status": "PASS"
   },
   {
@@ -134,7 +134,7 @@
   {
     "name": "Sorting functionality (sort_by='name_asc')",
     "expected": "Executes without error",
-    "actual": "Returned 1313 results",
+    "actual": "Returned 1292 results",
     "status": "PASS"
   },
   {
@@ -194,13 +194,13 @@
   {
     "name": "Relevant filter search",
     "expected": "Returns only common document formats",
-    "actual": "Count=1313, first=['D:\\\\AtlasTest\\\\1st.txt', 'D:\\\\AtlasTest\\\\2ndtest.txt', 'D:\\\\$RECYCLE.BIN\\\\S-1-5-21-1809960879-3372274502-2057582171-1002\\\\$I0M88UN.PDF']",
+    "actual": "Count=1292, first=['D:\\\\AtlasTest\\\\1st.txt', 'D:\\\\AtlasTest\\\\2ndtest.txt', 'D:\\\\Atlas\\\\README.md']",
     "status": "PASS"
   },
   {
     "name": "All Files filter",
     "expected": "Returns broader results than Relevant",
-    "actual": "All=75313, Relevant=1313",
+    "actual": "All=74586, Relevant=1292",
     "status": "PASS"
   },
   {
@@ -218,13 +218,13 @@
   {
     "name": "Database ignored-path filtering",
     "expected": "Search never returns venv or mysys64 records",
-    "actual": "Returned 75313 rows without ignored paths",
+    "actual": "Returned 74586 rows without ignored paths",
     "status": "PASS"
   },
   {
     "name": "Embedding generation for documents",
     "expected": "Embeddings stored >= 6",
-    "actual": "Stored: 1958",
+    "actual": "Stored: 2963",
     "status": "PASS"
   },
   {

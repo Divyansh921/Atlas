@@ -25,6 +25,8 @@ IGNORE_FOLDER_NAMES = {
     ".temp",
     "appdata",
     "programdata",
+    "$recycle.bin",
+    "system volume information",
 }
 
 

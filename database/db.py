@@ -43,17 +43,22 @@ RELEVANT_EXTENSIONS = {
 
 TYPE_ALIASES = {
     "pdf": {".pdf"},
+    "pdfs": {".pdf"},
     "word": {".doc", ".docx"},
-    "document": {".doc", ".docx"},
+    "word document": {".doc", ".docx"},
+    "word documents": {".doc", ".docx"},
     "doc": {".doc", ".docx"},
+    "docs": {".doc", ".docx"},
     "docx": {".docx"},
     "presentation": {".ppt", ".pptx"},
+    "presentations": {".ppt", ".pptx"},
     "powerpoint": {".ppt", ".pptx"},
     "slide": {".ppt", ".pptx"},
     "slides": {".ppt", ".pptx"},
     "ppt": {".ppt", ".pptx"},
     "pptx": {".pptx"},
     "spreadsheet": {".xls", ".xlsx"},
+    "spreadsheets": {".xls", ".xlsx"},
     "excel": {".xls", ".xlsx"},
     "xls": {".xls", ".xlsx"},
     "xlsx": {".xlsx"},
@@ -62,6 +67,35 @@ TYPE_ALIASES = {
     "markdown": {".md"},
     "md": {".md"},
     "csv": {".csv"},
+    "image": {".jpg", ".jpeg", ".png", ".gif", ".svg"},
+    "images": {".jpg", ".jpeg", ".png", ".gif", ".svg"},
+    "photo": {".jpg", ".jpeg", ".png"},
+    "photos": {".jpg", ".jpeg", ".png"},
+    "video": {".mp4", ".mkv", ".avi"},
+    "videos": {".mp4", ".mkv", ".avi"},
+    "audio": {".mp3", ".wav"},
+    "archive": {".zip", ".rar", ".7z"},
+    "archives": {".zip", ".rar", ".7z"},
+}
+
+CONVERSATIONAL_STOP_WORDS = {
+    "a", "an", "the", "of", "with", "for", "that", "contains",
+    "containing", "contain", "having", "has", "have", "about", "related",
+    "regarding", "concerning", "notes", "note", "presentation",
+    "presentations", "document", "documents", "file", "files",
+    "saved", "created", "modified", "updated", "recent", "recently",
+    "in", "on", "at", "by", "from", "to", "into", "or", "and", "all",
+    "any", "some", "find", "show", "give", "get", "search", "locate",
+    "open", "me", "my", "i", "need", "want", "looking", "please",
+    "where", "is", "are", "was", "were", "what", "which", "this",
+    "those", "these", "last", "past", "week", "month", "year",
+    "days", "today", "yesterday", "january", "february", "march",
+    "april", "may", "june", "july", "august", "september", "october",
+    "november", "december", "pdf", "pdfs", "doc", "docs", "docx",
+    "ppt", "pptx", "xls", "xlsx", "txt", "md", "csv", "word",
+    "excel", "powerpoint", "spreadsheet", "spreadsheets", "sheet",
+    "sheets", "text", "markdown", "slide", "slides", "image", "images",
+    "photo", "photos", "video", "videos", "audio", "archive", "archives"
 }
 
 
@@ -85,13 +119,16 @@ def detect_query_intent(query):
     elif re.search(r"\byesterday\b", text):
         start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         end = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif re.search(r"\blast\s+(week|7\s+days)\b", text):
+    elif re.search(r"\b(last|past)\s+(week|7\s+days)\b", text):
         start = now - timedelta(days=7)
         end = now
     elif re.search(r"\bthis\s+week\b", text):
         start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         end = now
-    elif re.search(r"\blast\s+month\b", text):
+    elif re.search(r"\b(last|past)\s+30\s+days\b", text):
+        start = now - timedelta(days=30)
+        end = now
+    elif re.search(r"\b(last|past)\s+month\b", text):
         first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if first_this_month.month == 1:
             start = first_this_month.replace(year=first_this_month.year - 1, month=12)
@@ -100,6 +137,12 @@ def detect_query_intent(query):
         end = first_this_month
     elif re.search(r"\bthis\s+month\b", text):
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = now
+    elif re.search(r"\blast\s+year\b", text):
+        start = datetime(now.year - 1, 1, 1)
+        end = datetime(now.year, 1, 1)
+    elif re.search(r"\bthis\s+year\b", text):
+        start = datetime(now.year, 1, 1)
         end = now
     else:
         month_names = [
@@ -114,18 +157,55 @@ def detect_query_intent(query):
         if month_match:
             month = month_names.index(month_match.group(1)) + 1
             year_match = re.search(r"\b(20\d{2})\b", text)
-            year = int(year_match.group(1)) if year_match else now.year
+            if year_match:
+                year = int(year_match.group(1))
+            else:
+                year = now.year - 1 if month > now.month else now.year
             start = datetime(year, month, 1)
             if month == 12:
                 end = datetime(year + 1, 1, 1)
             else:
                 end = datetime(year, month + 1, 1)
+        else:
+            year_only_match = re.search(r"\b(?:in|from|year)\s+(20\d{2})\b", text)
+            if year_only_match:
+                year = int(year_only_match.group(1))
+                start = datetime(year, 1, 1)
+                end = datetime(year + 1, 1, 1)
 
     return {
         "extensions": extensions,
         "date_start": start.timestamp() if start else None,
         "date_end": end.timestamp() if end else None,
     }
+
+
+def extract_semantic_topic(query, intent=None):
+    """Extract clean topic terms and semantic phrase from a natural language query."""
+    tokens = re.findall(r"[A-Za-z0-9]+", query or "")
+    has_date = bool(intent and intent.get("date_start") is not None)
+    topic_terms = []
+    for term in tokens:
+        lower = term.lower()
+        if lower in CONVERSATIONAL_STOP_WORDS:
+            continue
+        if has_date and re.fullmatch(r"20\d{2}", lower):
+            continue
+        topic_terms.append(term)
+
+    if not topic_terms:
+        fallback_terms = [
+            t for t in tokens
+            if t.lower() not in {
+                "a", "an", "the", "of", "with", "for", "in", "on", "at", "to",
+                "find", "show", "give", "get", "me", "my", "please", "where",
+                "is", "are", "all", "any", "some", "search", "locate", "open"
+            }
+        ]
+        topic_terms = fallback_terms or tokens
+
+    topic_query = " ".join(topic_terms) or (query or "").strip()
+    return topic_terms, topic_query
 
 
 def apply_type_filter(file_type, query_extensions=None):
@@ -2393,9 +2473,15 @@ def get_embedding_model():
                 "all-MiniLM-L6-v2..."
             )
 
-            _embedding_model = SentenceTransformer(
-                "all-MiniLM-L6-v2"
-            )
+            try:
+                _embedding_model = SentenceTransformer(
+                    "all-MiniLM-L6-v2",
+                    local_files_only=True
+                )
+            except Exception:
+                _embedding_model = SentenceTransformer(
+                    "all-MiniLM-L6-v2"
+                )
 
             logger.info(
                 "Embedding model loaded successfully."
@@ -2422,6 +2508,47 @@ def get_embedding_model():
             return None
 
 
+def _extract_folder_context(file_path, max_parts=3):
+    """Return meaningful parent folder names for embedding and lexical matching."""
+    if not file_path:
+        return ""
+    dirname = os.path.dirname(os.path.normpath(file_path))
+    parts = [
+        p for p in dirname.split(os.sep)
+        if p and not p.endswith(":") and p.lower() not in {"users"}
+    ]
+    if not parts:
+        return ""
+    selected = parts[-max_parts:]
+    return " / ".join(p.replace("_", " ").replace("-", " ") for p in selected)
+
+
+def _build_embedding_text(file_name, file_path, file_content):
+    """Build combined text with filename, folder context, and document body."""
+    stem = os.path.splitext(file_name or "")[0].replace("_", " ").replace("-", " ")
+    folder_ctx = _extract_folder_context(file_path)
+    header = f"{file_name} | {stem}" if stem and stem != file_name else (file_name or "")
+    if folder_ctx:
+        header += f" | folder: {folder_ctx}"
+    body = (file_content or "").strip()[:1800]
+    return f"{header}\n{body}" if body else header
+
+
+def _is_system_boilerplate_path(file_path, file_name):
+    """Identify OS/application install directories and license boilerplate files."""
+    lower_path = (file_path or "").lower()
+    lower_name = (file_name or "").lower()
+    if (
+        "\\program files\\" in lower_path
+        or "\\program files (x86)\\" in lower_path
+        or "\\windows\\" in lower_path
+    ):
+        return True
+    if "eula" in lower_name or "thirdpartynotices" in lower_name:
+        return True
+    return False
+
+
 # ============================================================
 # GENERATE EMBEDDING
 # ============================================================
@@ -2443,9 +2570,7 @@ def generate_embedding(text):
 
         import numpy as np
 
-        # Truncate text to avoid exceeding model limits
-        # (256 tokens ≈ ~1000 chars for safety)
-        truncated = text[:2000]
+        truncated = (text or "")[:2000]
 
         embedding = model.encode(
             truncated,
@@ -2474,66 +2599,43 @@ def natural_language_search(
     top_k=50
 ):
     """
-    Perform semantic search using sentence embeddings.
-
-    How it works:
-    1. Convert the user's natural language query into
-       a 384-dimensional embedding vector.
-    2. Compare this vector against pre-computed embeddings
-       of all indexed file content and filenames.
-    3. Use cosine similarity to rank results by
-       semantic relevance.
-    4. Return results sorted by similarity score,
-       with match_type='semantic'.
+    Perform hybrid natural language search combining:
+    1. Deterministic intent filters (file types, date ranges, drive).
+    2. Semantic cosine similarity over pre-computed sentence embeddings.
+    3. Lexical and FTS5 content corroboration across filenames, folders, and text.
     """
 
     import numpy as np
 
+    query = (query or "").strip()
+    if not query:
+        return []
+
     model = get_embedding_model()
-
-    if model is None:
-
-        return []
-
     intent = detect_query_intent(query)
+    topic_terms, topic_query = extract_semantic_topic(query, intent)
 
-    # Embed only semantic topic words. File type and date constraints are
-    # handled deterministically from metadata.
-    topic_terms = [
-        term for term in re.findall(r"[A-Za-z0-9]+", query)
-        if term.lower() not in {
-            "a", "an", "the", "of", "with", "for", "that", "contains",
-            "containing", "about", "notes", "note", "presentation",
-            "document", "file", "files", "saved", "created", "modified",
-            "in", "on", "last", "month", "week", "today", "yesterday",
-            "january", "february", "march", "april", "may", "june",
-            "july", "august", "september", "october", "november",
-            "december", "pdf", "doc", "docx", "ppt", "pptx", "xls",
-            "xlsx", "txt", "md", "csv", "word", "excel", "powerpoint",
-            "spreadsheet", "text", "markdown"
-        }
-    ]
-    topic_query = " ".join(topic_terms) or query
-
-    # Generate query embedding
-    query_embedding = generate_embedding(topic_query)
-
-    if query_embedding is None:
-
+    query_embedding = generate_embedding(topic_query) if model is not None else None
+    if query_embedding is None and not topic_terms:
         return []
+
+    query_norm = float(np.linalg.norm(query_embedding)) if query_embedding is not None else 0.0
+    if query_embedding is not None and query_norm > 0:
+        query_unit = (query_embedding / query_norm).astype(np.float32)
+    else:
+        query_unit = None
 
     connection = sqlite3.connect("atlas.db")
     cursor = connection.cursor()
 
     # --------------------------------------------------------
-    # Build filter conditions for drive and file_type
+    # Build deterministic filter conditions
     # --------------------------------------------------------
 
     filter_sql = ""
     filter_params = []
 
     if drive and drive != "all":
-
         filter_sql += " AND UPPER(f.file_path) LIKE ?"
         filter_params.append(f"{drive.upper()}%")
 
@@ -2548,12 +2650,44 @@ def natural_language_search(
         filter_params.extend([intent["date_start"], intent["date_end"]])
 
     # --------------------------------------------------------
-    # Retrieve all embeddings
+    # FTS5 content matching on topic terms
+    # --------------------------------------------------------
+
+    fts_all_ids = set()
+    fts_any_ids = set()
+    clean_fts_terms = [
+        re.sub(r"[^\w]", "", t) for t in topic_terms
+        if len(re.sub(r"[^\w]", "", t)) >= 2
+    ]
+    if not clean_fts_terms:
+        clean_fts_terms = [re.sub(r"[^\w]", "", t) for t in topic_terms if re.sub(r"[^\w]", "", t)]
+
+    if clean_fts_terms:
+        try:
+            if len(clean_fts_terms) > 1:
+                cursor.execute(
+                    "SELECT rowid FROM files_fts WHERE files_fts MATCH ? LIMIT 500",
+                    ("file_content : " + " AND ".join(clean_fts_terms),)
+                )
+                fts_all_ids.update(r[0] for r in cursor.fetchall())
+
+            cursor.execute(
+                "SELECT rowid FROM files_fts WHERE files_fts MATCH ? LIMIT 500",
+                ("file_content : " + " OR ".join(clean_fts_terms),)
+            )
+            fts_any_ids.update(r[0] for r in cursor.fetchall())
+            if len(clean_fts_terms) == 1:
+                fts_all_ids.update(fts_any_ids)
+        except Exception as e:
+            logger.debug("NL FTS lookup failed: %s", e)
+
+    # --------------------------------------------------------
+    # Retrieve embedded candidates
     # --------------------------------------------------------
 
     cursor.execute(f"""
         SELECT
-            e.file_id,
+            f.id,
             e.embedding,
             f.file_name,
             f.file_path,
@@ -2564,90 +2698,192 @@ def natural_language_search(
         WHERE 1=1 {filter_sql}
     """, filter_params)
 
-    rows = [
-        row for row in cursor.fetchall()
-        if not is_ignored_path(row[3])
-    ]
+    embedded_rows = []
+    seen_ids = set()
+    seen_paths = set()
+    for row in cursor.fetchall():
+        norm_p = os.path.normcase(os.path.normpath(row[3]))
+        if not is_ignored_path(row[3]) and norm_p not in seen_paths:
+            embedded_rows.append(row)
+            seen_ids.add(row[0])
+            seen_paths.add(norm_p)
+
+    # --------------------------------------------------------
+    # Retrieve un-embedded lexical / FTS candidates
+    # --------------------------------------------------------
+
+    lexical_candidates = []
+    if topic_terms:
+        lex_clauses = []
+        lex_params = list(filter_params)
+        for term in topic_terms:
+            lex_clauses.append("(LOWER(f.file_name) LIKE ? OR LOWER(f.file_path) LIKE ?)")
+            like_val = f"%{term.lower()}%"
+            lex_params.extend([like_val, like_val])
+
+        if fts_any_ids:
+            fts_list = sorted(fts_any_ids)[:500]
+            id_placeholders = ",".join("?" for _ in fts_list)
+            lex_clauses.append(f"f.id IN ({id_placeholders})")
+            lex_params.extend(fts_list)
+
+        if lex_clauses:
+            cursor.execute(f"""
+                SELECT
+                    f.id,
+                    f.file_name,
+                    f.file_path,
+                    f.size,
+                    f.last_modified,
+                    f.file_content
+                FROM files f
+                LEFT JOIN file_embeddings e ON e.file_id = f.id
+                WHERE e.file_id IS NULL {filter_sql}
+                  AND ({' OR '.join(lex_clauses)})
+                LIMIT 300
+            """, lex_params)
+            for row in cursor.fetchall():
+                norm_p = os.path.normcase(os.path.normpath(row[2]))
+                if row[0] not in seen_ids and norm_p not in seen_paths and not is_ignored_path(row[2]):
+                    lexical_candidates.append(row)
+                    seen_paths.add(norm_p)
 
     connection.close()
 
-    if not rows:
-
+    if not embedded_rows and not lexical_candidates:
         return []
 
     # --------------------------------------------------------
-    # Compute cosine similarity
+    # Vectorized semantic similarity for embedded candidates
     # --------------------------------------------------------
+
+    semantic_scores = {}
+    if query_unit is not None and embedded_rows:
+        valid_ids = []
+        vectors = []
+        dim = query_unit.shape[0]
+        for file_id, blob, *_ in embedded_rows:
+            try:
+                vec = np.frombuffer(blob, dtype=np.float32)
+                if vec.shape[0] == dim:
+                    vectors.append(vec)
+                    valid_ids.append(file_id)
+            except Exception:
+                continue
+
+        if vectors:
+            matrix = np.vstack(vectors)
+            norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+            norms[norms == 0] = 1.0
+            sims = (matrix / norms) @ query_unit
+            for fid, sim in zip(valid_ids, sims):
+                semantic_scores[fid] = float(sim)
+
+    # On-the-fly batch embedding for top un-embedded lexical candidates
+    if query_unit is not None and lexical_candidates and model is not None:
+        batch_rows = lexical_candidates[:25]
+        try:
+            texts = [
+                _build_embedding_text(r[1], r[2], r[5])
+                for r in batch_rows
+            ]
+            vecs = model.encode(texts, batch_size=25, show_progress_bar=False)
+            vecs = np.asarray(vecs, dtype=np.float32)
+            norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+            norms[norms == 0] = 1.0
+            sims = (vecs / norms) @ query_unit
+            for r, sim in zip(batch_rows, sims):
+                semantic_scores[r[0]] = float(sim)
+        except Exception as e:
+            logger.debug("On-the-fly candidate embedding failed: %s", e)
+
+    # --------------------------------------------------------
+    # Combine candidates and score relevance
+    # --------------------------------------------------------
+
+    all_candidates = []
+    for fid, _, fn, fp, sz, lm in embedded_rows:
+        all_candidates.append((fid, fn, fp, sz, lm))
+    for fid, fn, fp, sz, lm, _ in lexical_candidates:
+        all_candidates.append((fid, fn, fp, sz, lm))
+
+    lower_terms = [t.lower() for t in topic_terms if len(t) >= 2] or [t.lower() for t in topic_terms]
+    topic_phrase = " ".join(lower_terms)
+    query_asks_boilerplate = any(
+        t in {"eula", "license", "notice", "notices", "windows", "program"}
+        for t in lower_terms
+    )
 
     results_with_score = []
 
-    for row in rows:
+    for file_id, file_name, file_path, size, last_modified in all_candidates:
+        sem_sim = semantic_scores.get(file_id, 0.0)
 
-        file_id = row[0]
-        embedding_blob = row[1]
-        file_name = row[2]
-        file_path = row[3]
-        size = row[4]
-        last_modified = row[5]
+        # Lexical corroboration across filename, parent folder, and FTS5 content
+        lex_score = 0.0
+        if lower_terms:
+            clean_name = " ".join(re.findall(r"[a-z0-9]+", file_name.lower()))
+            name_tokens = set(clean_name.split())
+            folder_str = _extract_folder_context(file_path).lower()
+            folder_tokens = set(re.findall(r"[a-z0-9]+", folder_str))
 
-        try:
+            name_hits = sum(
+                1 for t in lower_terms
+                if t in name_tokens or (len(t) >= 3 and t in clean_name)
+            )
+            path_hits = sum(
+                1 for t in lower_terms
+                if t in folder_tokens or (len(t) >= 3 and t in folder_str)
+            )
+            total_terms = len(lower_terms)
+            name_ratio = name_hits / total_terms
+            path_ratio = path_hits / total_terms
 
-            file_embedding = np.frombuffer(
-                embedding_blob,
-                dtype=np.float32
+            phrase_bonus = 0.0
+            if total_terms > 1 and topic_phrase in clean_name:
+                phrase_bonus = 0.22
+            elif total_terms > 1 and topic_phrase in folder_str:
+                phrase_bonus = 0.14
+
+            fts_bonus = 0.0
+            if file_id in fts_all_ids:
+                fts_bonus = 0.28
+            elif file_id in fts_any_ids:
+                fts_bonus = 0.12
+
+            lex_score = min(0.80, (0.45 * name_ratio) + (0.22 * path_ratio) + fts_bonus + phrase_bonus)
+
+        is_boilerplate = (not query_asks_boilerplate) and _is_system_boilerplate_path(file_path, file_name)
+
+        # Strict qualification gate BEFORE metadata tie-breaks
+        if is_boilerplate and lex_score < 0.25:
+            qualified = sem_sim >= 0.36
+        else:
+            qualified = (
+                sem_sim >= 0.285
+                or lex_score >= 0.28
+                or (sem_sim >= 0.22 and lex_score >= 0.12)
             )
 
-            # Cosine similarity
-            dot_product = np.dot(
-                query_embedding, file_embedding
-            )
-
-            norm_q = np.linalg.norm(query_embedding)
-            norm_f = np.linalg.norm(file_embedding)
-
-            if norm_q == 0 or norm_f == 0:
-
-                continue
-
-            similarity = dot_product / (
-                norm_q * norm_f
-            )
-
-            if (
-                intent["date_start"] is not None
-                and intent["date_end"] is not None
-            ):
-                if intent["date_start"] <= last_modified < intent["date_end"]:
-                    similarity += 0.08
-                else:
-                    similarity -= 0.05
-
-            extension = os.path.splitext(file_name)[1].lower()
-            if intent["extensions"]:
-                if extension in intent["extensions"]:
-                    similarity += 0.12
-                else:
-                    similarity -= 0.12
-
-            # Only include results above threshold
-            if similarity > 0.25:
-
-                results_with_score.append(
-                    (
-                        file_name,
-                        file_path,
-                        size,
-                        last_modified,
-                        float(similarity)
-                    )
-                )
-
-        except Exception:
-
+        if not qualified:
             continue
 
+        combined_score = sem_sim + (0.50 * lex_score)
+        if is_boilerplate:
+            combined_score -= 0.08
+
+        results_with_score.append(
+            (
+                file_name,
+                file_path,
+                size,
+                last_modified,
+                float(combined_score)
+            )
+        )
+
     # --------------------------------------------------------
-    # Sort by similarity and take top_k
+    # Sort by combined relevance score and take top_k
     # --------------------------------------------------------
 
     results_with_score.sort(
@@ -2686,7 +2922,7 @@ def natural_language_search(
         file_path,
         size,
         last_modified,
-        similarity
+        _score
     ) in results_with_score:
 
         formatted_date = datetime.fromtimestamp(
@@ -2723,26 +2959,26 @@ def generate_file_embedding(file_id):
     cursor = connection.cursor()
 
     cursor.execute("""
-        SELECT file_name, file_content
+        SELECT file_name, file_path, file_content
         FROM files
         WHERE id = ?
     """, (file_id,))
 
     row = cursor.fetchone()
 
-    if not row or not row[1]:
+    if not row or not row[2]:
 
         connection.close()
         return False
 
-    file_name, file_content = row
+    file_name, file_path, file_content = row
 
-    combined_text = f"{file_name}\n{file_content[:2000]}"
+    combined_text = _build_embedding_text(file_name, file_path, file_content)
     embedding = generate_embedding(combined_text)
 
     if embedding is not None:
 
-        content_hash = "hash_" + str(len(file_content or ""))
+        content_hash = "v2_" + str(len(file_content or ""))
 
         cursor.execute("""
             INSERT INTO file_embeddings
@@ -2770,15 +3006,15 @@ def generate_file_embedding(file_id):
 # GENERATE AND STORE EMBEDDINGS FOR ALL FILES
 # ============================================================
 
-def generate_all_embeddings(limit=500, progress_callback=None):
+def generate_all_embeddings(limit=5000, progress_callback=None):
     """
-    Generate embeddings for files that have content
-    indexed but no embedding yet, or whose content
-    has changed.
+    Generate embeddings for extractable document files that have content
+    indexed but no embedding yet, or whose embedding version/content changed.
+    Prioritizes user documents over system/installation directories and
+    encodes in batches for speed.
     """
 
     import numpy as np
-    import hashlib
 
     model = get_embedding_model()
 
@@ -2794,9 +3030,9 @@ def generate_all_embeddings(limit=500, progress_callback=None):
     connection = sqlite3.connect("atlas.db")
     cursor = connection.cursor()
 
-    # Find files with content but no embedding,
-    # or outdated embedding
-    cursor.execute("""
+    placeholders = ",".join("?" for _ in CONTENT_EXTENSIONS)
+
+    cursor.execute(f"""
         SELECT
             f.id,
             f.file_name,
@@ -2804,92 +3040,86 @@ def generate_all_embeddings(limit=500, progress_callback=None):
             f.file_content
         FROM files f
         LEFT JOIN file_embeddings e ON f.id = e.file_id
-        WHERE f.file_content IS NOT NULL
+        WHERE LOWER(f.extension) IN ({placeholders})
+        AND f.file_content IS NOT NULL
         AND f.file_content != ''
         AND (
             e.file_id IS NULL
             OR e.content_hash != (
-                'hash_' || CAST(LENGTH(f.file_content) AS TEXT)
+                'v2_' || CAST(LENGTH(f.file_content) AS TEXT)
             )
         )
+        ORDER BY
+            CASE
+                WHEN LOWER(f.file_path) LIKE '%\\program files%' THEN 1
+                WHEN LOWER(f.file_path) LIKE '%\\windows\\%' THEN 1
+                ELSE 0
+            END ASC,
+            CASE WHEN e.file_id IS NULL THEN 0 ELSE 1 END ASC,
+            f.last_modified DESC
         LIMIT ?
-    """, (limit,))
+    """, list(CONTENT_EXTENSIONS) + [limit])
 
-    files_to_embed = cursor.fetchall()
-    connection.close()
+    files_to_embed = [
+        row for row in cursor.fetchall()
+        if not is_ignored_path(row[2])
+    ]
 
     total = len(files_to_embed)
     success = 0
     failed = 0
+    batch_size = 32
 
-    for i, (
-        file_id,
-        file_name,
-        file_path,
-        file_content
-    ) in enumerate(files_to_embed):
+    for start in range(0, total, batch_size):
+
+        batch = files_to_embed[start:start + batch_size]
+        texts = [
+            _build_embedding_text(file_name, file_path, file_content)
+            for (_, file_name, file_path, file_content) in batch
+        ]
 
         try:
 
-            # Create a combined text representation
-            # including filename for context
-            combined_text = (
-                f"{file_name}\n{file_content[:2000]}"
+            embeddings = model.encode(
+                texts,
+                batch_size=batch_size,
+                show_progress_bar=False
             )
+            embeddings = np.asarray(embeddings, dtype=np.float32)
 
-            embedding = generate_embedding(
-                combined_text
-            )
+            rows_to_upsert = []
+            for idx, (file_id, file_name, file_path, file_content) in enumerate(batch):
+                vec = embeddings[idx]
+                content_hash = "v2_" + str(len(file_content or ""))
+                rows_to_upsert.append((file_id, vec.tobytes(), content_hash))
 
-            if embedding is not None:
+            cursor.executemany("""
+                INSERT INTO file_embeddings
+                (file_id, embedding, content_hash)
+                VALUES (?, ?, ?)
+                ON CONFLICT(file_id)
+                DO UPDATE SET
+                    embedding = excluded.embedding,
+                    content_hash = excluded.content_hash
+            """, rows_to_upsert)
+            connection.commit()
 
-                # Store embedding in database
-                content_hash = (
-                    "hash_"
-                    + str(len(file_content or ""))
-                )
-
-                conn = sqlite3.connect("atlas.db")
-                cur = conn.cursor()
-
-                cur.execute("""
-                    INSERT INTO file_embeddings
-                    (file_id, embedding, content_hash)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(file_id)
-                    DO UPDATE SET
-                        embedding = excluded.embedding,
-                        content_hash =
-                            excluded.content_hash
-                """, (
-                    file_id,
-                    embedding.tobytes(),
-                    content_hash
-                ))
-
-                conn.commit()
-                conn.close()
-
-                success += 1
-
-            else:
-
-                failed += 1
+            success += len(rows_to_upsert)
 
         except Exception as e:
 
-            logger.debug(
-                "Embedding failed for %s: %s",
-                file_path, e
-            )
+            logger.debug("Batch embedding failed: %s", e)
+            failed += len(batch)
 
-            failed += 1
-
-        if progress_callback and (i + 1) % 100 == 0:
-
+        if progress_callback:
             progress_callback(
-                i + 1, total, success, failed
+                min(start + len(batch), total),
+                total,
+                success,
+                failed
             )
+
+    connection.close()
 
     return {
         "total": total,
